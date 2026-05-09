@@ -1,40 +1,46 @@
 import { Button } from "@/shared/components/Button";
 import { InfoRow } from "@/shared/components/InfoRow";
+import { ScreenHeader } from "@/shared/components/ScreenHeader";
 import { SignalPreview } from "@/shared/components/SignalPreview";
-import { StatusBadge } from "@/shared/components/StatusBadge";
 
 type PulseCheckScreenProps = {
   onBack: () => void;
   onNext: () => void;
 };
 
-const pulseBars = [22, 36, 58, 82, 66, 44, 30, 48, 76, 88, 54, 34, 46, 72];
-
 export function PulseCheckScreen({ onBack, onNext }: PulseCheckScreenProps) {
   return (
-    <div className="flex flex-1 flex-col p-5 sm:p-6">
-      <StatusBadge tone="pending">Camera placeholder</StatusBadge>
-      <h2 className="mt-4 text-2xl font-bold tracking-normal text-[#1e2823]">
-        Pulse Check
-      </h2>
+    <div className="flex flex-1 flex-col">
+      <ScreenHeader
+        description="Rest your finger over the rear camera when this flow is implemented. For now, this is a static preview."
+        status="Camera placeholder"
+        title="Pulse check"
+        tone="pulse"
+      />
 
       <div className="mt-6">
-        <SignalPreview bars={pulseBars} label="PPG frame signal" tone="pulse" />
+        <SignalPreview
+          caption="Camera preview and pulse signal will appear here later."
+          label="Camera preview"
+          status="Inactive"
+          tone="pulse"
+        />
       </div>
 
-      <div className="mt-6">
-        <InfoRow label="Camera stream" value="Not connected" />
-        <InfoRow label="Frame sampler" value="Not started" />
-        <InfoRow label="Heart rhythm estimate" value="Waiting" />
+      <div className="mt-4 grid gap-3">
+        <InfoRow label="Camera stream" tone="pulse" value="Not connected" />
+        <InfoRow label="Frame sampler" tone="pulse" value="Not started" />
+        <InfoRow label="Pulse estimate" tone="warning" value="Waiting" />
       </div>
 
-      <div className="mt-auto grid grid-cols-2 gap-3 pt-8">
-        <Button onClick={onBack} variant="secondary">
+      <div className="mt-auto space-y-3 pt-8">
+        <Button className="w-full" onClick={onNext}>
+          Continue
+        </Button>
+        <Button className="w-full" onClick={onBack} variant="ghost">
           Back
         </Button>
-        <Button onClick={onNext}>Continue</Button>
       </div>
     </div>
   );
 }
-

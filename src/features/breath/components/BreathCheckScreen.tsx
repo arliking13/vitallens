@@ -1,40 +1,46 @@
 import { Button } from "@/shared/components/Button";
 import { InfoRow } from "@/shared/components/InfoRow";
+import { ScreenHeader } from "@/shared/components/ScreenHeader";
 import { SignalPreview } from "@/shared/components/SignalPreview";
-import { StatusBadge } from "@/shared/components/StatusBadge";
 
 type BreathCheckScreenProps = {
   onBack: () => void;
   onNext: () => void;
 };
 
-const breathBars = [38, 44, 52, 64, 78, 88, 80, 66, 54, 44, 36, 42, 58, 72];
-
 export function BreathCheckScreen({ onBack, onNext }: BreathCheckScreenProps) {
   return (
-    <div className="flex flex-1 flex-col p-5 sm:p-6">
-      <StatusBadge tone="pending">Motion placeholder</StatusBadge>
-      <h2 className="mt-4 text-2xl font-bold tracking-normal text-[#1e2823]">
-        Breath Motion Check
-      </h2>
+    <div className="flex flex-1 flex-col">
+      <ScreenHeader
+        description="Place the phone on the upper abdomen or chest when motion sensing is added. This screen is only a placeholder."
+        status="Motion placeholder"
+        title="Breath motion check"
+        tone="breath"
+      />
 
       <div className="mt-6">
-        <SignalPreview bars={breathBars} label="Motion rhythm" tone="breath" />
+        <SignalPreview
+          caption="Motion preview and breathing wave will appear here later."
+          label="Motion preview"
+          status="Inactive"
+          tone="breath"
+        />
       </div>
 
-      <div className="mt-6">
-        <InfoRow label="Device motion" value="Not connected" />
-        <InfoRow label="Rhythm window" value="Not started" />
-        <InfoRow label="Breathing estimate" value="Waiting" />
+      <div className="mt-4 grid gap-3">
+        <InfoRow label="Device motion" tone="breath" value="Not connected" />
+        <InfoRow label="Rhythm window" tone="breath" value="Not started" />
+        <InfoRow label="Breathing estimate" tone="warning" value="Waiting" />
       </div>
 
-      <div className="mt-auto grid grid-cols-2 gap-3 pt-8">
-        <Button onClick={onBack} variant="secondary">
+      <div className="mt-auto space-y-3 pt-8">
+        <Button className="w-full" onClick={onNext}>
+          Continue
+        </Button>
+        <Button className="w-full" onClick={onBack} variant="ghost">
           Back
         </Button>
-        <Button onClick={onNext}>Continue</Button>
       </div>
     </div>
   );
 }
-

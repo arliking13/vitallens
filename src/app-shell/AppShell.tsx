@@ -18,10 +18,9 @@ export function AppShell() {
   const [completedSteps, setCompletedSteps] = useState<StepId[]>([]);
 
   const activeIndex = stepOrder.indexOf(activeStep);
-  const activeStepLabel = APP_STEPS[activeIndex]?.label ?? "VitalLens";
 
   const progressLabel = useMemo(
-    () => `Step ${activeIndex + 1} of ${stepOrder.length}`,
+    () => `${activeIndex + 1}/${stepOrder.length}`,
     [activeIndex],
   );
 
@@ -53,20 +52,35 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#f6f8f4] text-[#26312c]">
-      <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 py-5 sm:px-6 sm:py-8">
-        <header className="mb-5 flex items-start justify-between gap-4">
+    <div className="min-h-dvh bg-[#F5F7F4] text-[#1C2520]">
+      <main className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-xl">
+        <header className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#0b6f61]">
-              VitalLens
+            <p className="text-lg font-bold tracking-normal text-[#1C2520]">VitalLens</p>
+            <p className="mt-0.5 text-sm font-medium text-[#66706A]">
+              Guided wellness check-in
             </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-normal text-[#1e2823]">
-              Wellness check-in
-            </h1>
           </div>
-          <div className="rounded-lg border border-[#d8ded6] bg-white px-3 py-2 text-right">
-            <p className="text-xs font-semibold text-[#66736b]">{progressLabel}</p>
-            <p className="mt-1 text-sm font-bold text-[#26312c]">{activeStepLabel}</p>
+          <div
+            aria-label={`Progress ${activeIndex + 1} of ${stepOrder.length}`}
+            className="flex items-center gap-2 rounded-full border border-[#E5EAE4] bg-white/80 px-3 py-2 shadow-[0_8px_22px_rgba(28,37,32,0.045)]"
+          >
+            <span className="text-xs font-bold text-[#157A6E]">{progressLabel}</span>
+            <span className="flex items-center gap-1" aria-hidden="true">
+              {stepOrder.map((stepId, index) => (
+                <span
+                  className={[
+                    "h-1.5 rounded-full transition-all",
+                    index === activeIndex
+                      ? "w-4 bg-[#157A6E]"
+                      : completedSteps.includes(stepId)
+                        ? "w-1.5 bg-[#69B9B0]"
+                        : "w-1.5 bg-[#D9E0D8]",
+                  ].join(" ")}
+                  key={stepId}
+                />
+              ))}
+            </span>
           </div>
         </header>
 
@@ -77,7 +91,7 @@ export function AppShell() {
           steps={APP_STEPS}
         />
 
-        <section className="mt-4 flex flex-1 flex-col rounded-lg border border-[#d8ded6] bg-white shadow-sm">
+        <section className="mt-7 flex flex-1 flex-col">
           {activeStep === "intro" ? (
             <IntroScreen onNext={() => completeAndGoNext("intro")} />
           ) : null}
@@ -101,4 +115,3 @@ export function AppShell() {
     </div>
   );
 }
-

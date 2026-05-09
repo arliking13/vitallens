@@ -2,17 +2,40 @@ type InfoRowProps = {
   label: string;
   value: string;
   detail?: string;
+  tone?: "neutral" | "brand" | "pulse" | "breath" | "warning";
 };
 
-export function InfoRow({ label, value, detail }: InfoRowProps) {
+const dotClasses = {
+  neutral: "bg-[#AEB8B0]",
+  brand: "bg-[#157A6E]",
+  pulse: "bg-[#E97E7E]",
+  breath: "bg-[#69B9B0]",
+  warning: "bg-[#C49A52]",
+};
+
+export function InfoRow({
+  label,
+  value,
+  detail,
+  tone = "neutral",
+}: InfoRowProps) {
   return (
-    <div className="grid gap-1 border-t border-[#e6ebe5] py-3 first:border-t-0">
-      <div className="flex items-baseline justify-between gap-4">
-        <span className="text-sm font-medium text-[#536159]">{label}</span>
-        <span className="text-sm font-semibold text-[#26312c]">{value}</span>
+    <div className="rounded-[20px] border border-[#E5EAE4] bg-white px-4 py-3.5 shadow-[0_10px_26px_rgba(28,37,32,0.04)]">
+      <div className="flex items-center justify-between gap-4">
+        <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-[#66706A]">
+          <span
+            className={`h-2.5 w-2.5 rounded-full ${dotClasses[tone]}`}
+            aria-hidden="true"
+          />
+          <span className="truncate">{label}</span>
+        </span>
+        <span className="shrink-0 rounded-full bg-[#F5F7F4] px-3 py-1 text-sm font-semibold text-[#1C2520]">
+          {value}
+        </span>
       </div>
-      {detail ? <p className="text-sm leading-6 text-[#66736b]">{detail}</p> : null}
+      {detail ? (
+        <p className="mt-2 text-sm leading-6 text-[#66706A]">{detail}</p>
+      ) : null}
     </div>
   );
 }
-

@@ -14,22 +14,25 @@ export function StepNavigation({
   steps,
 }: StepNavigationProps) {
   return (
-    <nav aria-label="VitalLens flow" className="overflow-x-auto pb-1">
-      <ol className="flex min-w-max gap-2">
-        {steps.map((step, index) => {
+    <nav
+      aria-label="VitalLens flow"
+      className="mt-5 overflow-hidden rounded-full border border-[#E5EAE4] bg-white/70 p-1 shadow-[0_10px_28px_rgba(28,37,32,0.045)]"
+    >
+      <ol className="grid grid-cols-4 gap-1">
+        {steps.map((step) => {
           const isActive = step.id === activeStep;
           const isComplete = completedSteps.includes(step.id);
 
           return (
-            <li className="flex items-center gap-2" key={step.id}>
+            <li key={step.id}>
               <button
                 aria-current={isActive ? "step" : undefined}
                 className={[
-                  "grid h-12 min-w-24 place-items-center rounded-lg border px-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b6f61]",
+                  "grid h-9 w-full place-items-center rounded-full px-2 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#157A6E]",
                   isActive
-                    ? "border-[#0b6f61] bg-[#0b6f61] text-white"
-                    : "border-[#d8ded6] bg-white text-[#536159] hover:bg-[#f5f8f6]",
-                  isComplete && !isActive ? "border-[#b7d99f] text-[#3b6f1f]" : "",
+                    ? "bg-[#157A6E] text-white shadow-[0_8px_18px_rgba(21,122,110,0.16)]"
+                    : "text-[#66706A] hover:bg-white",
+                  isComplete && !isActive ? "text-[#157A6E]" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -39,9 +42,6 @@ export function StepNavigation({
                 <span className="sm:hidden">{step.shortLabel}</span>
                 <span className="hidden sm:inline">{step.label}</span>
               </button>
-              {index < steps.length - 1 ? (
-                <span className="h-px w-4 bg-[#d8ded6]" aria-hidden="true" />
-              ) : null}
             </li>
           );
         })}
@@ -49,4 +49,3 @@ export function StepNavigation({
     </nav>
   );
 }
-
