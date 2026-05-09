@@ -199,7 +199,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         `Estimate state: ${estimateStateNote}`,
         qualityMessage,
         pulseEstimate.message,
-        `Signal quality: ${signalQuality}`,
+        `Signal clarity: ${signalQuality}`,
       ],
       pulseEstimate,
       recordingStartedAt,
@@ -296,7 +296,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         <InfoRow
           delayMs={200}
           detail={qualityMessage}
-          label="Signal quality"
+          label="Signal clarity"
           tone={signalQualityRowTones[signalQuality]}
           value={signalQualityLabels[signalQuality]}
         />
@@ -314,7 +314,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
               fingerGateState === "finger-lost" &&
               pulseEstimate.usedLastCleanWindow
                 ? "Estimate based on last clean window. Non-medical estimate."
-                : `Non-medical estimate / Confidence: ${
+                : `Non-medical estimate / Estimate confidence: ${
                     pulseConfidenceLabels[pulseEstimate.confidence]
                   }`
             }
