@@ -3,6 +3,11 @@
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { movingAverage } from "@/features/pulse/lib/ppgFilters";
+import {
+  analyzePulseSignalQuality,
+  type PulseSignalQuality,
+} from "@/features/pulse/lib/pulseQuality";
 import {
   buildLiveSignal,
   type PpgSample,
@@ -18,6 +23,24 @@ type UsePulseFrameSamplerOptions = {
 
 const SAMPLE_INTERVAL_MS = 40;
 const MAX_STORED_SAMPLES = 600;
+const SMOOTHING_WINDOW_SIZE = 5;
+const initialQuality = analyzePulseSignalQuality([]);
+
+function createSessionId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `ppg-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getSampleDurationMs(samples: PpgSample[]) {
+  if (samples.length < 2) {
+    return 0;
+  }
+
+  return Math.max(0, samples[samples.length - 1].t - samples[0].t);
+}
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
@@ -33,6 +56,19 @@ export function usePulseFrameSampler({
 }: UsePulseFrameSamplerOptions) {
   const [samples, setSamples] = useState<PpgSample[]>([]);
   const [liveSignal, setLiveSignal] = useState<number[]>([]);
+  const [smoothedSignal, setSmoothedSignal] = useState<number[]>([]);
+  const [signalQuality, setSignalQuality] = useState<PulseSignalQuality>(
+    initialQuality.signalQuality,
+  );
+  const [fingerDetected, setFingerDetected] = useState(
+    initialQuality.fingerDetected,
+  );
+  const [qualityMessage, setQualityMessage] = useState(
+    initialQuality.qualityMessage,
+  );
+  const [sessionId, setSessionId] = useState(createSessionId);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [durationMs, setDurationMs] = useState(0);
   const [status, setStatus] = useState<SamplingStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -56,9 +92,17 @@ export function usePulseFrameSampler({
   }, [clearSamplingTimer]);
 
   const resetSamples = useCallback(() => {
+    const nextQuality = analyzePulseSignalQuality([]);
     samplesRef.current = [];
     setSamples([]);
     setLiveSignal([]);
+    setSmoothedSignal([]);
+    setSignalQuality(nextQuality.signalQuality);
+    setFingerDetected(nextQuality.fingerDetected);
+    setQualityMessage(nextQuality.qualityMessage);
+    setSessionId(createSessionId());
+    setStartedAt(null);
+    setDurationMs(0);
     setError(null);
     setStatus((currentStatus) =>
       currentStatus === "sampling" ? "sampling" : "idle",
@@ -88,8 +132,20 @@ export function usePulseFrameSampler({
         -MAX_STORED_SAMPLES,
       );
       samplesRef.current = nextSamples;
+      const nextLiveSignal = buildLiveSignal(nextSamples);
+      const nextSmoothedSignal = movingAverage(
+        nextLiveSignal,
+        SMOOTHING_WINDOW_SIZE,
+      );
+      const nextQuality = analyzePulseSignalQuality(nextSamples);
+
       setSamples(nextSamples);
-      setLiveSignal(buildLiveSignal(nextSamples));
+      setLiveSignal(nextLiveSignal);
+      setSmoothedSignal(nextSmoothedSignal);
+      setSignalQuality(nextQuality.signalQuality);
+      setFingerDetected(nextQuality.fingerDetected);
+      setQualityMessage(nextQuality.qualityMessage);
+      setDurationMs(getSampleDurationMs(nextSamples));
     } catch (samplingError) {
       clearSamplingTimer();
       setError(getErrorMessage(samplingError));
@@ -112,6 +168,11 @@ export function usePulseFrameSampler({
 
     clearSamplingTimer();
     setError(null);
+    if (samplesRef.current.length === 0) {
+      setSessionId(createSessionId());
+      setStartedAt(new Date().toISOString());
+      setDurationMs(0);
+    }
     setStatus("sampling");
     captureSample();
     timerRef.current = window.setInterval(captureSample, SAMPLE_INTERVAL_MS);
@@ -136,6 +197,13 @@ export function usePulseFrameSampler({
   return {
     samples,
     liveSignal,
+    smoothedSignal,
+    signalQuality,
+    fingerDetected,
+    qualityMessage,
+    sessionId,
+    startedAt,
+    durationMs,
     status,
     error,
     startSampling,
@@ -143,4 +211,3 @@ export function usePulseFrameSampler({
     resetSamples,
   };
 }
-
