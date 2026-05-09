@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "VitalLens",
-  description: "A browser-based wellness check-in prototype.",
+  description: "A browser-based wellness check-in experience.",
 };
 
 export default function RootLayout({

@@ -10,10 +10,10 @@ type ReportScreenProps = {
 
 export function ReportScreen({ onBack, onRestart }: ReportScreenProps) {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-col">
       <ScreenHeader
-        description="A placeholder summary for the values that will be produced after the sensor and report modules are added."
-        status="Report placeholder"
+        description="Your pulse and breathing results will be summarized here after the check."
+        status="Report preview"
         title="Check-in summary"
         tone="brand"
       />
@@ -26,9 +26,8 @@ export function ReportScreen({ onBack, onRestart }: ReportScreenProps) {
       <Card className="mt-4" padding="lg">
         <p className="text-sm font-semibold text-[#1C2520]">Wellness summary</p>
         <p className="mt-3 text-base leading-7 text-[#66706A]">
-          Report generation is not connected yet. Later, structured placeholder
-          results will be sent to a Next.js API route for a safe wellness-only
-          summary.
+          Complete the pulse and breath checks to see a gentle wellness-focused
+          overview of your session.
         </p>
       </Card>
 
@@ -39,7 +38,7 @@ export function ReportScreen({ onBack, onRestart }: ReportScreenProps) {
         </p>
       </div>
 
-      <div className="mt-auto space-y-3 pt-8">
+      <div className="space-y-3 pt-6">
         <Button className="w-full" onClick={onRestart}>
           Restart
         </Button>

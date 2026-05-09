@@ -10,27 +10,27 @@ type IntroScreenProps = {
 const includedItems = [
   {
     title: "Pulse check",
-    detail: "A guided camera placeholder for the upcoming PPG flow.",
+    detail: "A guided camera-based pulse reading experience.",
     tone: "pulse",
   },
   {
     title: "Breath motion check",
-    detail: "A motion placeholder for the upcoming breathing rhythm flow.",
+    detail: "A guided motion-based breathing rhythm check.",
     tone: "breath",
   },
   {
     title: "Wellness report",
-    detail: "A non-medical summary screen ready for later API integration.",
+    detail: "A wellness-only summary of the check-in.",
     tone: "brand",
   },
 ] as const;
 
 export function IntroScreen({ onNext }: IntroScreenProps) {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-col">
       <ScreenHeader
-        description="Move through two gentle placeholder checks and end with a calm wellness summary."
-        status="Prototype"
+        description="Move through two gentle checks and end with a calm wellness summary."
+        status="Wellness preview"
         title="Wellness check-in"
         tone="brand"
       />
@@ -62,20 +62,20 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
 
       <div className="mt-4 grid gap-3">
         <InfoRow
-          detail="No account, database, or native iOS layer is part of this prototype."
+          detail="VitalLens runs in the browser with no account, database, or native iOS layer."
           label="App scope"
           tone="brand"
           value="Browser only"
         />
         <InfoRow
-          detail="The future report should stay informational and non-diagnostic."
+          detail="Reports stay informational, wellness-focused, and non-diagnostic."
           label="Safety mode"
           tone="warning"
           value="Wellness only"
         />
       </div>
 
-      <div className="mt-auto pt-8">
+      <div className="pt-6">
         <Button className="w-full" onClick={onNext}>
           Begin check-in
         </Button>

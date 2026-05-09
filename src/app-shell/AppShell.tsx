@@ -91,7 +91,7 @@ export function AppShell() {
           steps={APP_STEPS}
         />
 
-        <section className="mt-7 flex flex-1 flex-col">
+        <section className="mt-6 flex flex-col pb-2">
           {activeStep === "intro" ? (
             <IntroScreen onNext={() => completeAndGoNext("intro")} />
           ) : null}

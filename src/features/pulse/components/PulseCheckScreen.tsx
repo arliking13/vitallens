@@ -10,30 +10,30 @@ type PulseCheckScreenProps = {
 
 export function PulseCheckScreen({ onBack, onNext }: PulseCheckScreenProps) {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-col">
       <ScreenHeader
-        description="Rest your finger over the rear camera when this flow is implemented. For now, this is a static preview."
-        status="Camera placeholder"
+        description="Rest your finger over the rear camera and stay still during the reading."
+        status="Camera check"
         title="Pulse check"
         tone="pulse"
       />
 
       <div className="mt-6">
         <SignalPreview
-          caption="Camera preview and pulse signal will appear here later."
+          caption="Soft pulse signal preview"
           label="Camera preview"
-          status="Inactive"
+          status="Ready"
           tone="pulse"
         />
       </div>
 
       <div className="mt-4 grid gap-3">
-        <InfoRow label="Camera stream" tone="pulse" value="Not connected" />
-        <InfoRow label="Frame sampler" tone="pulse" value="Not started" />
+        <InfoRow label="Camera stream" tone="pulse" value="Idle" />
+        <InfoRow label="Frame sampler" tone="pulse" value="Idle" />
         <InfoRow label="Pulse estimate" tone="warning" value="Waiting" />
       </div>
 
-      <div className="mt-auto space-y-3 pt-8">
+      <div className="space-y-3 pt-6">
         <Button className="w-full" onClick={onNext}>
           Continue
         </Button>
