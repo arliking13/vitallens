@@ -1,4 +1,5 @@
 import type { CameraStatus, TorchState } from "../hooks/useRearCamera";
+import type { FingerGateState } from "./fingerGate";
 import type { PulseEstimate } from "./pulseEstimator";
 import type { PpgSample } from "./ppgSampler";
 
@@ -30,6 +31,12 @@ export type PpgDebugReport = {
   cameraStatusAtExport: CameraStatus;
   torchStateAtStart: TorchState;
   torchStateAtExport: TorchState;
+  fingerGateState: FingerGateState;
+  validSampleCount: number;
+  ignoredFrameCount: number;
+  fingerLostCount: number;
+  recordingStartedAt: number | null;
+  lastFingerLostAt: number | null;
   pulseEstimate: PulseEstimate;
   samples: PpgDebugSample[];
   quality: PpgDebugQuality;
@@ -39,8 +46,13 @@ type BuildPpgDebugReportOptions = {
   cameraStatusAtExport: CameraStatus;
   cameraStatusAtStart: CameraStatus;
   fingerDetected: boolean;
+  fingerGateState: FingerGateState;
+  fingerLostCount: number;
+  ignoredFrameCount: number;
+  lastFingerLostAt: number | null;
   notes?: string[];
   pulseEstimate: PulseEstimate;
+  recordingStartedAt: number | null;
   samples: PpgSample[];
   sessionId: string;
   startedAt: string;
@@ -150,8 +162,13 @@ export function buildPpgDebugReport({
   cameraStatusAtExport,
   cameraStatusAtStart,
   fingerDetected,
+  fingerGateState,
+  fingerLostCount,
+  ignoredFrameCount,
+  lastFingerLostAt,
   notes = [],
   pulseEstimate,
+  recordingStartedAt,
   samples,
   sessionId,
   startedAt,
@@ -175,6 +192,14 @@ export function buildPpgDebugReport({
     cameraStatusAtExport,
     torchStateAtStart,
     torchStateAtExport,
+    fingerGateState,
+    validSampleCount: samples.length,
+    ignoredFrameCount,
+    fingerLostCount,
+    recordingStartedAt:
+      recordingStartedAt === null ? null : formatNumber(recordingStartedAt),
+    lastFingerLostAt:
+      lastFingerLostAt === null ? null : formatNumber(lastFingerLostAt),
     pulseEstimate: {
       ...pulseEstimate,
       confidenceScore: formatNumber(pulseEstimate.confidenceScore),

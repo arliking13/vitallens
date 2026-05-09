@@ -3,6 +3,11 @@
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+  evaluateFingerGate,
+  type FingerGateState,
+  getFingerGateMessage,
+} from "@/features/pulse/lib/fingerGate";
 import { movingAverage } from "@/features/pulse/lib/ppgFilters";
 import {
   analyzePulseSignalQuality,
@@ -28,6 +33,7 @@ type UsePulseFrameSamplerOptions = {
 const SAMPLE_INTERVAL_MS = 40;
 const MAX_STORED_SAMPLES = 600;
 const SMOOTHING_WINDOW_SIZE = 5;
+const TRANSITION_TRIM_MS = 750;
 const initialQuality = analyzePulseSignalQuality([]);
 const initialPulseEstimate = estimatePulseFromSamples({
   fingerDetected: initialQuality.fingerDetected,
@@ -49,6 +55,10 @@ function getSampleDurationMs(samples: PpgSample[]) {
   }
 
   return Math.max(0, samples[samples.length - 1].t - samples[0].t);
+}
+
+function trimRecentSamples(samples: PpgSample[], trimAfterMs: number) {
+  return samples.filter((sample) => sample.t < trimAfterMs);
 }
 
 function getErrorMessage(error: unknown) {
@@ -80,6 +90,14 @@ export function usePulseFrameSampler({
   const [sessionId, setSessionId] = useState(createSessionId);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [durationMs, setDurationMs] = useState(0);
+  const [fingerGateState, setFingerGateState] =
+    useState<FingerGateState>("waiting-for-finger");
+  const [ignoredFrameCount, setIgnoredFrameCount] = useState(0);
+  const [fingerLostCount, setFingerLostCount] = useState(0);
+  const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(
+    null,
+  );
+  const [lastFingerLostAt, setLastFingerLostAt] = useState<number | null>(null);
   const [status, setStatus] = useState<SamplingStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -87,6 +105,10 @@ export function usePulseFrameSampler({
   const samplesRef = useRef<PpgSample[]>([]);
   const timerRef = useRef<number | null>(null);
   const statusRef = useRef<SamplingStatus>("idle");
+  const previousFrameRef = useRef<PpgSample | null>(null);
+  const fingerGateStateRef = useRef<FingerGateState>("waiting-for-finger");
+  const stabilizationStartedAtRef = useRef<number | null>(null);
+  const recordingStartedAtRef = useRef<number | null>(null);
 
   const clearSamplingTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -121,10 +143,68 @@ export function usePulseFrameSampler({
     setSessionId(createSessionId());
     setStartedAt(null);
     setDurationMs(0);
+    setFingerGateState("waiting-for-finger");
+    setIgnoredFrameCount(0);
+    setFingerLostCount(0);
+    setRecordingStartedAt(null);
+    setLastFingerLostAt(null);
+    previousFrameRef.current = null;
+    fingerGateStateRef.current = "waiting-for-finger";
+    stabilizationStartedAtRef.current = null;
+    recordingStartedAtRef.current = null;
     setError(null);
     setStatus((currentStatus) =>
       currentStatus === "sampling" ? "sampling" : "idle",
     );
+  }, []);
+
+  const resetMeasurementWindow = useCallback((sample: PpgSample) => {
+    const nextQuality = analyzePulseSignalQuality([]);
+    samplesRef.current = [];
+    setSamples([]);
+    setLiveSignal([]);
+    setSmoothedSignal([]);
+    setSignalQuality(nextQuality.signalQuality);
+    setFingerDetected(nextQuality.fingerDetected);
+    setQualityMessage("Restarting clean signal window");
+    setPulseEstimate(
+      estimatePulseFromSamples({
+        fingerDetected: nextQuality.fingerDetected,
+        samples: [],
+        signalQuality: nextQuality.signalQuality,
+      }),
+    );
+    setSessionId(createSessionId());
+    setStartedAt(new Date().toISOString());
+    setDurationMs(0);
+    setRecordingStartedAt(null);
+    recordingStartedAtRef.current = null;
+    stabilizationStartedAtRef.current = sample.t;
+  }, []);
+
+  const updateRecordedSamples = useCallback((nextSamples: PpgSample[]) => {
+    samplesRef.current = nextSamples;
+    const nextLiveSignal = buildLiveSignal(nextSamples);
+    const nextSmoothedSignal = movingAverage(
+      nextLiveSignal,
+      SMOOTHING_WINDOW_SIZE,
+    );
+    const nextQuality = analyzePulseSignalQuality(nextSamples);
+    const nextPulseEstimate = estimatePulseFromSamples({
+      fingerDetected: nextQuality.fingerDetected,
+      normalizedSignal: nextLiveSignal,
+      samples: nextSamples,
+      signalQuality: nextQuality.signalQuality,
+    });
+
+    setSamples(nextSamples);
+    setLiveSignal(nextLiveSignal);
+    setSmoothedSignal(nextSmoothedSignal);
+    setSignalQuality(nextQuality.signalQuality);
+    setFingerDetected(nextQuality.fingerDetected);
+    setQualityMessage(nextQuality.qualityMessage);
+    setPulseEstimate(nextPulseEstimate);
+    setDurationMs(getSampleDurationMs(nextSamples));
   }, []);
 
   const captureSample = useCallback(() => {
@@ -146,37 +226,70 @@ export function usePulseFrameSampler({
         return;
       }
 
+      const gateDecision = evaluateFingerGate({
+        previousSample: previousFrameRef.current,
+        sample,
+        stabilizationStartedAt: stabilizationStartedAtRef.current,
+        state: fingerGateStateRef.current,
+      });
+      const previousGateState = fingerGateStateRef.current;
+      previousFrameRef.current = sample;
+      fingerGateStateRef.current = gateDecision.nextState;
+      stabilizationStartedAtRef.current = gateDecision.stabilizationStartedAt;
+      setFingerGateState(gateDecision.nextState);
+
+      if (gateDecision.shouldResetSession) {
+        resetMeasurementWindow(sample);
+      }
+
+      if (
+        gateDecision.shouldTrimRecentSamples &&
+        samplesRef.current.length > 0
+      ) {
+        const trimmedSamples = trimRecentSamples(
+          samplesRef.current,
+          sample.t - TRANSITION_TRIM_MS,
+        );
+        updateRecordedSamples(trimmedSamples);
+        setFingerLostCount((count) => count + 1);
+        setLastFingerLostAt(sample.t);
+        setQualityMessage("Place your finger back over the camera");
+      }
+
+      if (!gateDecision.shouldRecord) {
+        setIgnoredFrameCount((count) => count + 1);
+        setFingerDetected(gateDecision.covered);
+        if (gateDecision.shouldResetSession) {
+          setQualityMessage("Restarting clean signal window");
+        } else if (!gateDecision.shouldTrimRecentSamples) {
+          setQualityMessage(getFingerGateMessage(gateDecision.nextState));
+        }
+        return;
+      }
+
+      if (recordingStartedAtRef.current === null) {
+        recordingStartedAtRef.current = sample.t;
+        setRecordingStartedAt(sample.t);
+        if (previousGateState !== "recording") {
+          setStartedAt(new Date().toISOString());
+        }
+      }
+
       const nextSamples = [...samplesRef.current, sample].slice(
         -MAX_STORED_SAMPLES,
       );
-      samplesRef.current = nextSamples;
-      const nextLiveSignal = buildLiveSignal(nextSamples);
-      const nextSmoothedSignal = movingAverage(
-        nextLiveSignal,
-        SMOOTHING_WINDOW_SIZE,
-      );
-      const nextQuality = analyzePulseSignalQuality(nextSamples);
-      const nextPulseEstimate = estimatePulseFromSamples({
-        fingerDetected: nextQuality.fingerDetected,
-        normalizedSignal: nextLiveSignal,
-        samples: nextSamples,
-        signalQuality: nextQuality.signalQuality,
-      });
-
-      setSamples(nextSamples);
-      setLiveSignal(nextLiveSignal);
-      setSmoothedSignal(nextSmoothedSignal);
-      setSignalQuality(nextQuality.signalQuality);
-      setFingerDetected(nextQuality.fingerDetected);
-      setQualityMessage(nextQuality.qualityMessage);
-      setPulseEstimate(nextPulseEstimate);
-      setDurationMs(getSampleDurationMs(nextSamples));
+      updateRecordedSamples(nextSamples);
     } catch (samplingError) {
       clearSamplingTimer();
       setError(getErrorMessage(samplingError));
       setStatus("error");
     }
-  }, [clearSamplingTimer, videoRef]);
+  }, [
+    clearSamplingTimer,
+    resetMeasurementWindow,
+    updateRecordedSamples,
+    videoRef,
+  ]);
 
   const startSampling = useCallback(() => {
     if (!stream) {
@@ -197,6 +310,11 @@ export function usePulseFrameSampler({
       setSessionId(createSessionId());
       setStartedAt(new Date().toISOString());
       setDurationMs(0);
+      setFingerGateState("waiting-for-finger");
+      setRecordingStartedAt(null);
+      fingerGateStateRef.current = "waiting-for-finger";
+      stabilizationStartedAtRef.current = null;
+      recordingStartedAtRef.current = null;
     }
     setStatus("sampling");
     captureSample();
@@ -230,6 +348,12 @@ export function usePulseFrameSampler({
     sessionId,
     startedAt,
     durationMs,
+    fingerGateState,
+    validSampleCount: samples.length,
+    ignoredFrameCount,
+    fingerLostCount,
+    recordingStartedAt,
+    lastFingerLostAt,
     status,
     error,
     startSampling,

@@ -46,6 +46,27 @@ const samplingStatusLabels = {
 
 const MIN_EXPORT_DURATION_MS = 5000;
 
+const fingerGateLabels = {
+  "waiting-for-finger": "Place finger over camera",
+  stabilizing: "Hold steady",
+  recording: "Recording clean signal",
+  "finger-lost": "Finger moved - hold steady again",
+};
+
+const fingerGateTones = {
+  "waiting-for-finger": "warning",
+  stabilizing: "pulse",
+  recording: "complete",
+  "finger-lost": "warning",
+} as const;
+
+const fingerGateRowTones = {
+  "waiting-for-finger": "warning",
+  stabilizing: "pulse",
+  recording: "brand",
+  "finger-lost": "warning",
+} as const;
+
 const signalQualityLabels = {
   "no-signal": "No signal",
   "too-dark": "Too dark",
@@ -96,10 +117,15 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
     useRearCamera();
   const {
     durationMs,
+    fingerGateState,
     fingerDetected,
+    fingerLostCount,
+    ignoredFrameCount,
     error: samplingError,
+    lastFingerLostAt,
     pulseEstimate,
     qualityMessage,
+    recordingStartedAt,
     resetSamples,
     samples,
     sessionId,
@@ -109,13 +135,16 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
     startedAt,
     status: samplingStatus,
     stopSampling,
+    validSampleCount,
   } = usePulseFrameSampler({ stream, videoRef });
   const isCameraReady = status === "ready";
   const isRequestingCamera = status === "requesting";
   const isSampling = samplingStatus === "sampling";
   const showTorchStatus = torchState !== "unsupported";
   const canExportSignalData =
-    samples.length > 0 && durationMs >= MIN_EXPORT_DURATION_MS && startedAt !== null;
+    samples.length > 0 &&
+    durationMs >= MIN_EXPORT_DURATION_MS &&
+    startedAt !== null;
   const hasPulseEstimate = pulseEstimate.bpm !== null;
 
   function handleCameraButtonClick() {
@@ -154,12 +183,17 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
       cameraStatusAtExport: status,
       cameraStatusAtStart: cameraStatusAtStart ?? status,
       fingerDetected,
+      fingerGateState,
+      fingerLostCount,
+      ignoredFrameCount,
+      lastFingerLostAt,
       notes: [
         qualityMessage,
         pulseEstimate.message,
         `Signal quality: ${signalQuality}`,
       ],
       pulseEstimate,
+      recordingStartedAt,
       samples,
       sessionId,
       startedAt,
@@ -211,6 +245,9 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         <StatusBadge tone={isSampling ? "pulse" : "neutral"}>
           {samplingStatusLabels[samplingStatus]}
         </StatusBadge>
+        <StatusBadge tone={fingerGateTones[fingerGateState]}>
+          {fingerGateLabels[fingerGateState]}
+        </StatusBadge>
         <StatusBadge tone={signalQualityTones[signalQuality]}>
           {signalQualityLabels[signalQuality]}
         </StatusBadge>
@@ -234,13 +271,13 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         <InfoRow
           delayMs={160}
           detail={
-            fingerDetected
-              ? "Finger detected. Keep your finger still."
-              : "Place finger over camera."
+            fingerGateState === "finger-lost"
+              ? "Place your finger back over the camera."
+              : fingerGateLabels[fingerGateState]
           }
-          label="Finger placement"
-          tone={fingerDetected ? "pulse" : "warning"}
-          value={fingerDetected ? "Finger detected" : "Place finger over camera"}
+          label="Finger gate"
+          tone={fingerGateRowTones[fingerGateState]}
+          value={fingerGateLabels[fingerGateState]}
         />
         <InfoRow
           delayMs={200}
@@ -251,14 +288,15 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         />
         <InfoRow
           delayMs={240}
-          label="Sample count"
+          detail={`${ignoredFrameCount} ignored frames / ${fingerLostCount} finger-lost events`}
+          label="Valid samples"
           tone="neutral"
-          value={String(samples.length)}
+          value={String(validSampleCount)}
         />
         {hasPulseEstimate ? (
           <InfoRow
             delayMs={280}
-            detail={`Non-medical estimate · Confidence: ${
+            detail={`Non-medical estimate / Confidence: ${
               pulseConfidenceLabels[pulseEstimate.confidence]
             }`}
             label="Estimated pulse"
