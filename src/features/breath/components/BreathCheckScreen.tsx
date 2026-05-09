@@ -21,6 +21,7 @@ export function BreathCheckScreen({ onBack, onNext }: BreathCheckScreenProps) {
       <div className="mt-6">
         <SignalPreview
           caption="Slow breathing motion preview"
+          delayMs={40}
           label="Motion preview"
           status="Ready"
           tone="breath"
@@ -28,9 +29,14 @@ export function BreathCheckScreen({ onBack, onNext }: BreathCheckScreenProps) {
       </div>
 
       <div className="mt-4 grid gap-3">
-        <InfoRow label="Device motion" tone="breath" value="Idle" />
-        <InfoRow label="Rhythm window" tone="breath" value="Idle" />
-        <InfoRow label="Breathing estimate" tone="warning" value="Waiting" />
+        <InfoRow delayMs={80} label="Device motion" tone="breath" value="Idle" />
+        <InfoRow delayMs={120} label="Rhythm window" tone="breath" value="Idle" />
+        <InfoRow
+          delayMs={160}
+          label="Breathing estimate"
+          tone="warning"
+          value="Waiting"
+        />
       </div>
 
       <div className="space-y-3 pt-6">

@@ -1,8 +1,15 @@
+import type { CSSProperties } from "react";
+
 type SignalPreviewProps = {
   caption: string;
+  delayMs?: number;
   label: string;
   status: string;
   tone: "pulse" | "breath";
+};
+
+type AnimationStyle = CSSProperties & {
+  "--card-delay"?: string;
 };
 
 const previewStyles = {
@@ -22,14 +29,24 @@ const previewStyles = {
 
 export function SignalPreview({
   caption,
+  delayMs = 40,
   label,
   status,
   tone,
 }: SignalPreviewProps) {
   const style = previewStyles[tone];
+  const animationStyle: AnimationStyle = {
+    "--card-delay": `${delayMs}ms`,
+  };
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[#E5EAE4] bg-white p-4 shadow-[0_18px_48px_rgba(28,37,32,0.055)]">
+    <div
+      className={[
+        "signal-preview animate-card-in overflow-hidden rounded-[24px] border border-[#E5EAE4] bg-white p-4 shadow-[0_18px_48px_rgba(28,37,32,0.055)]",
+        tone === "pulse" ? "signal-pulse" : "signal-breathe",
+      ].join(" ")}
+      style={animationStyle}
+    >
       <div className="flex items-center justify-between gap-3 px-1 pb-4">
         <div>
           <p className="text-sm font-semibold text-[#1C2520]">{label}</p>
@@ -44,15 +61,15 @@ export function SignalPreview({
         aria-hidden="true"
       >
         <div
-          className={`absolute left-1/2 top-8 h-24 w-24 -translate-x-1/2 rounded-full blur-2xl ${style.glow}`}
+          className={`signal-glow absolute left-1/2 top-8 h-24 w-24 -translate-x-1/2 rounded-full blur-2xl ${style.glow}`}
         />
         {tone === "pulse" ? (
-          <div className="absolute left-1/2 top-8 h-24 w-24 -translate-x-1/2 rounded-full border border-white/80 bg-white/70 shadow-[inset_0_0_0_10px_rgba(233,126,126,0.08),0_16px_40px_rgba(233,126,126,0.16)]" />
+          <div className="signal-orb absolute left-1/2 top-8 h-24 w-24 -translate-x-1/2 rounded-full border border-white/80 bg-white/70 shadow-[inset_0_0_0_10px_rgba(233,126,126,0.08),0_16px_40px_rgba(233,126,126,0.16)]" />
         ) : (
-          <div className="absolute left-1/2 top-7 h-28 w-16 -translate-x-1/2 rounded-[24px] border border-white/80 bg-white/70 shadow-[inset_0_0_0_7px_rgba(105,185,176,0.08),0_16px_40px_rgba(105,185,176,0.16)]" />
+          <div className="signal-orb absolute left-1/2 top-7 h-28 w-16 -translate-x-1/2 rounded-[24px] border border-white/80 bg-white/70 shadow-[inset_0_0_0_7px_rgba(105,185,176,0.08),0_16px_40px_rgba(105,185,176,0.16)]" />
         )}
         <svg
-          className="absolute inset-x-4 bottom-9 h-28"
+          className="signal-wave absolute inset-x-4 bottom-9 h-28"
           preserveAspectRatio="none"
           viewBox="0 0 240 128"
         >

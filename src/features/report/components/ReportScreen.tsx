@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import { Button } from "@/shared/components/Button";
 import { Card } from "@/shared/components/Card";
 import { InfoRow } from "@/shared/components/InfoRow";
@@ -19,11 +21,16 @@ export function ReportScreen({ onBack, onRestart }: ReportScreenProps) {
       />
 
       <div className="mt-6 grid gap-3">
-        <InfoRow label="Pulse result" tone="pulse" value="Pending" />
-        <InfoRow label="Breathing result" tone="breath" value="Pending" />
+        <InfoRow delayMs={40} label="Pulse result" tone="pulse" value="Pending" />
+        <InfoRow
+          delayMs={80}
+          label="Breathing result"
+          tone="breath"
+          value="Pending"
+        />
       </div>
 
-      <Card className="mt-4" padding="lg">
+      <Card className="mt-4" delayMs={120} padding="lg">
         <p className="text-sm font-semibold text-[#1C2520]">Wellness summary</p>
         <p className="mt-3 text-base leading-7 text-[#66706A]">
           Complete the pulse and breath checks to see a gentle wellness-focused
@@ -31,7 +38,10 @@ export function ReportScreen({ onBack, onRestart }: ReportScreenProps) {
         </p>
       </Card>
 
-      <div className="mt-4 rounded-[22px] border border-[#ead8bd] bg-[#F4E7D2] px-4 py-3.5">
+      <div
+        className="animate-card-in mt-4 rounded-[22px] border border-[#ead8bd] bg-[#F4E7D2] px-4 py-3.5"
+        style={{ "--card-delay": "160ms" } as CSSProperties}
+      >
         <p className="text-sm font-medium leading-6 text-[#705225]">
           VitalLens is not a medical device and does not diagnose, treat, or
           measure blood pressure, SpO2, or ECG.

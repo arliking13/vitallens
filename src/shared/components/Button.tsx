@@ -24,7 +24,7 @@ export function Button({
   return (
     <button
       className={[
-        "inline-flex min-h-14 items-center justify-center rounded-[18px] border px-5 text-base font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "interactive-press inline-flex min-h-14 items-center justify-center rounded-[18px] border px-5 text-base font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         variantClasses[variant],
         className,
       ]

@@ -21,6 +21,7 @@ export function PulseCheckScreen({ onBack, onNext }: PulseCheckScreenProps) {
       <div className="mt-6">
         <SignalPreview
           caption="Soft pulse signal preview"
+          delayMs={40}
           label="Camera preview"
           status="Ready"
           tone="pulse"
@@ -28,9 +29,14 @@ export function PulseCheckScreen({ onBack, onNext }: PulseCheckScreenProps) {
       </div>
 
       <div className="mt-4 grid gap-3">
-        <InfoRow label="Camera stream" tone="pulse" value="Idle" />
-        <InfoRow label="Frame sampler" tone="pulse" value="Idle" />
-        <InfoRow label="Pulse estimate" tone="warning" value="Waiting" />
+        <InfoRow delayMs={80} label="Camera stream" tone="pulse" value="Idle" />
+        <InfoRow delayMs={120} label="Frame sampler" tone="pulse" value="Idle" />
+        <InfoRow
+          delayMs={160}
+          label="Pulse estimate"
+          tone="warning"
+          value="Waiting"
+        />
       </div>
 
       <div className="space-y-3 pt-6">

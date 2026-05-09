@@ -70,12 +70,12 @@ export function AppShell() {
               {stepOrder.map((stepId, index) => (
                 <span
                   className={[
-                    "h-1.5 rounded-full transition-all",
+                    "progress-dot",
                     index === activeIndex
-                      ? "w-4 bg-[#157A6E]"
+                      ? "progress-dot-active"
                       : completedSteps.includes(stepId)
-                        ? "w-1.5 bg-[#69B9B0]"
-                        : "w-1.5 bg-[#D9E0D8]",
+                        ? "progress-dot-complete"
+                        : "",
                   ].join(" ")}
                   key={stepId}
                 />
@@ -92,24 +92,26 @@ export function AppShell() {
         />
 
         <section className="mt-6 flex flex-col pb-2">
-          {activeStep === "intro" ? (
-            <IntroScreen onNext={() => completeAndGoNext("intro")} />
-          ) : null}
-          {activeStep === "pulse" ? (
-            <PulseCheckScreen
-              onBack={goBack}
-              onNext={() => completeAndGoNext("pulse")}
-            />
-          ) : null}
-          {activeStep === "breath" ? (
-            <BreathCheckScreen
-              onBack={goBack}
-              onNext={() => completeAndGoNext("breath")}
-            />
-          ) : null}
-          {activeStep === "report" ? (
-            <ReportScreen onBack={goBack} onRestart={restart} />
-          ) : null}
+          <div className="animate-screen-in" key={activeStep}>
+            {activeStep === "intro" ? (
+              <IntroScreen onNext={() => completeAndGoNext("intro")} />
+            ) : null}
+            {activeStep === "pulse" ? (
+              <PulseCheckScreen
+                onBack={goBack}
+                onNext={() => completeAndGoNext("pulse")}
+              />
+            ) : null}
+            {activeStep === "breath" ? (
+              <BreathCheckScreen
+                onBack={goBack}
+                onNext={() => completeAndGoNext("breath")}
+              />
+            ) : null}
+            {activeStep === "report" ? (
+              <ReportScreen onBack={goBack} onRestart={restart} />
+            ) : null}
+          </div>
         </section>
       </main>
     </div>

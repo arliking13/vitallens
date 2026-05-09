@@ -35,7 +35,7 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
         tone="brand"
       />
 
-      <Card className="mt-8" padding="lg">
+      <Card className="mt-8" delayMs={40} padding="lg">
         <p className="text-sm font-semibold text-[#1C2520]">What this includes</p>
         <div className="mt-5 space-y-5">
           {includedItems.map((item) => (
@@ -62,12 +62,14 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
 
       <div className="mt-4 grid gap-3">
         <InfoRow
+          delayMs={80}
           detail="VitalLens runs in the browser with no account, database, or native iOS layer."
           label="App scope"
           tone="brand"
           value="Browser only"
         />
         <InfoRow
+          delayMs={120}
           detail="Reports stay informational, wellness-focused, and non-diagnostic."
           label="Safety mode"
           tone="warning"

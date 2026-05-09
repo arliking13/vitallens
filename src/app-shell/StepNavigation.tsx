@@ -28,7 +28,7 @@ export function StepNavigation({
               <button
                 aria-current={isActive ? "step" : undefined}
                 className={[
-                  "grid h-9 w-full place-items-center rounded-full px-2 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#157A6E]",
+                  "step-pill grid h-9 w-full place-items-center rounded-full px-2 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#157A6E]",
                   isActive
                     ? "bg-[#157A6E] text-white shadow-[0_8px_18px_rgba(21,122,110,0.16)]"
                     : "text-[#66706A] hover:bg-white",
