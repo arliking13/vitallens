@@ -129,6 +129,14 @@ button {
   animation: signal-breathe-glow 4s ease-in-out infinite;
 }
 
+.scanner-surface .scanner-ring {
+  animation: scanner-ring 3.2s ease-in-out infinite;
+}
+
+.scanner-surface .scanner-glow {
+  animation: scanner-glow 3.2s ease-in-out infinite;
+}
+
 @keyframes screen-in {
   from {
     opacity: 0;
@@ -226,6 +234,32 @@ button {
   }
 }
 
+@keyframes scanner-ring {
+  0%,
+  100% {
+    opacity: 0.86;
+    transform: scale(0.985);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.025);
+  }
+}
+
+@keyframes scanner-glow {
+  0%,
+  100% {
+    opacity: 0.58;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-screen-in,
   .animate-card-in {
@@ -246,6 +280,11 @@ button {
   .signal-preview .signal-wave,
   .signal-preview .signal-glow,
   .signal-preview .signal-orb {
+    animation: none;
+  }
+
+  .scanner-surface .scanner-ring,
+  .scanner-surface .scanner-glow {
     animation: none;
   }
 }

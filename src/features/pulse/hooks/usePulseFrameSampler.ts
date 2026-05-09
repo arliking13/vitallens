@@ -30,6 +30,10 @@ type UsePulseFrameSamplerOptions = {
   videoRef: RefObject<HTMLVideoElement | null>;
 };
 
+type UpdateRecordedSamplesOptions = {
+  usedLastCleanWindow?: boolean;
+};
+
 const SAMPLE_INTERVAL_MS = 40;
 const MAX_STORED_SAMPLES = 600;
 const SMOOTHING_WINDOW_SIZE = 5;
@@ -186,33 +190,40 @@ export function usePulseFrameSampler({
     stabilizationStartedAtRef.current = sample.t;
   }, []);
 
-  const updateRecordedSamples = useCallback((nextSamples: PpgSample[]) => {
-    samplesRef.current = nextSamples;
-    const nextRecordingStartedAt = getSampleWindowStartedAt(nextSamples);
-    const nextLiveSignal = buildLiveSignal(nextSamples);
-    const nextSmoothedSignal = movingAverage(
-      nextLiveSignal,
-      SMOOTHING_WINDOW_SIZE,
-    );
-    const nextQuality = analyzePulseSignalQuality(nextSamples);
-    const nextPulseEstimate = estimatePulseFromSamples({
-      fingerDetected: nextQuality.fingerDetected,
-      normalizedSignal: nextLiveSignal,
-      samples: nextSamples,
-      signalQuality: nextQuality.signalQuality,
-    });
+  const updateRecordedSamples = useCallback(
+    (
+      nextSamples: PpgSample[],
+      options: UpdateRecordedSamplesOptions = {},
+    ) => {
+      samplesRef.current = nextSamples;
+      const nextRecordingStartedAt = getSampleWindowStartedAt(nextSamples);
+      const nextLiveSignal = buildLiveSignal(nextSamples);
+      const nextSmoothedSignal = movingAverage(
+        nextLiveSignal,
+        SMOOTHING_WINDOW_SIZE,
+      );
+      const nextQuality = analyzePulseSignalQuality(nextSamples);
+      const nextPulseEstimate = estimatePulseFromSamples({
+        fingerDetected: nextQuality.fingerDetected,
+        normalizedSignal: nextLiveSignal,
+        samples: nextSamples,
+        signalQuality: nextQuality.signalQuality,
+        usedLastCleanWindow: options.usedLastCleanWindow ?? false,
+      });
 
-    setSamples(nextSamples);
-    setLiveSignal(nextLiveSignal);
-    setSmoothedSignal(nextSmoothedSignal);
-    setSignalQuality(nextQuality.signalQuality);
-    setFingerDetected(nextQuality.fingerDetected);
-    setQualityMessage(nextQuality.qualityMessage);
-    setPulseEstimate(nextPulseEstimate);
-    setRecordingStartedAt(nextRecordingStartedAt);
-    recordingStartedAtRef.current = nextRecordingStartedAt;
-    setDurationMs(getSampleDurationMs(nextSamples));
-  }, []);
+      setSamples(nextSamples);
+      setLiveSignal(nextLiveSignal);
+      setSmoothedSignal(nextSmoothedSignal);
+      setSignalQuality(nextQuality.signalQuality);
+      setFingerDetected(nextQuality.fingerDetected);
+      setQualityMessage(nextQuality.qualityMessage);
+      setPulseEstimate(nextPulseEstimate);
+      setRecordingStartedAt(nextRecordingStartedAt);
+      recordingStartedAtRef.current = nextRecordingStartedAt;
+      setDurationMs(getSampleDurationMs(nextSamples));
+    },
+    [],
+  );
 
   const captureSample = useCallback(() => {
     const video = videoRef.current;
@@ -257,7 +268,9 @@ export function usePulseFrameSampler({
           samplesRef.current,
           sample.t - TRANSITION_TRIM_MS,
         );
-        updateRecordedSamples(trimmedSamples);
+        updateRecordedSamples(trimmedSamples, {
+          usedLastCleanWindow: trimmedSamples.length > 0,
+        });
         setFingerLostCount((count) => count + 1);
         setLastFingerLostAt(sample.t);
         setQualityMessage("Place your finger back over the camera");

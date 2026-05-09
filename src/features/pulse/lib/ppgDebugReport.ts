@@ -219,6 +219,7 @@ export function buildPpgDebugReport({
       autocorrelationStrength: formatNumber(
         pulseEstimate.autocorrelationStrength,
       ),
+      frequencyStrength: formatNumber(pulseEstimate.frequencyStrength),
     },
     samples: samples.map((sample, index) => ({
       t: formatNumber(sample.t),

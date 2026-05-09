@@ -216,6 +216,8 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
       <div className="mt-6">
         <CameraPreview
           delayMs={40}
+          fingerGateState={fingerGateState}
+          isSampling={isSampling}
           status={status}
           stream={stream}
           videoRef={videoRef}
@@ -296,9 +298,14 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         {hasPulseEstimate ? (
           <InfoRow
             delayMs={280}
-            detail={`Non-medical estimate / Confidence: ${
-              pulseConfidenceLabels[pulseEstimate.confidence]
-            }`}
+            detail={
+              fingerGateState === "finger-lost" &&
+              pulseEstimate.usedLastCleanWindow
+                ? "Finger moved - estimate based on last clean window. Non-medical estimate."
+                : `Non-medical estimate / Confidence: ${
+                    pulseConfidenceLabels[pulseEstimate.confidence]
+                  }`
+            }
             label="Estimated pulse"
             tone={pulseConfidenceRowTones[pulseEstimate.confidence]}
             value={`${pulseEstimate.bpm} BPM`}

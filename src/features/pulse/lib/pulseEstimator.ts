@@ -3,6 +3,10 @@ import type { PulseSignalQuality } from "./pulseQuality";
 import type { PpgSample } from "./ppgSampler";
 
 export type PulseEstimateConfidence = "low" | "fair" | "good";
+export type PulseEstimateSource =
+  | "autocorrelation"
+  | "frequency-confirmed"
+  | "none";
 
 export type PulseEstimate = {
   bpm: number | null;
@@ -14,6 +18,10 @@ export type PulseEstimate = {
   correctedBpm: number | null;
   harmonicCorrected: boolean;
   autocorrelationStrength: number;
+  frequencyBpmCandidate: number | null;
+  frequencyStrength: number;
+  estimateSource: PulseEstimateSource;
+  usedLastCleanWindow: boolean;
 };
 
 type EstimatePulseOptions = {
@@ -21,26 +29,51 @@ type EstimatePulseOptions = {
   normalizedSignal?: number[];
   samples: PpgSample[];
   signalQuality: PulseSignalQuality;
+  usedLastCleanWindow?: boolean;
 };
 
 const MIN_DURATION_MS = 15000;
+const LOW_CONFIDENCE_MIN_DURATION_MS = 20000;
+const MIN_LOW_CONFIDENCE_SAMPLES = 360;
 const MIN_BPM = 45;
 const MAX_BPM = 160;
 const MIN_CORRELATION = 0.24;
+const MIN_WEAK_CORRELATION = 0.04;
+const MIN_FREQUENCY_STRENGTH = 0.055;
+const MAX_CONFIRMATION_GAP_BPM = 14;
 const HARMONIC_CORRECTION_BPM = 120;
 const BRIGHTNESS_ARTIFACT_RANGE = 30;
 
-function emptyEstimate(message: string): PulseEstimate {
+type EstimateDiagnostics = Partial<
+  Pick<
+    PulseEstimate,
+    | "autocorrelationStrength"
+    | "estimateSource"
+    | "frequencyBpmCandidate"
+    | "frequencyStrength"
+    | "rawBpmCandidate"
+    | "usedLastCleanWindow"
+  >
+>;
+
+function emptyEstimate(
+  message: string,
+  diagnostics: EstimateDiagnostics = {},
+): PulseEstimate {
   return {
     bpm: null,
     confidence: "low",
     confidenceScore: 0,
     method: "autocorrelation",
     message,
-    rawBpmCandidate: null,
+    rawBpmCandidate: diagnostics.rawBpmCandidate ?? null,
     correctedBpm: null,
     harmonicCorrected: false,
-    autocorrelationStrength: 0,
+    autocorrelationStrength: diagnostics.autocorrelationStrength ?? 0,
+    frequencyBpmCandidate: diagnostics.frequencyBpmCandidate ?? null,
+    frequencyStrength: diagnostics.frequencyStrength ?? 0,
+    estimateSource: diagnostics.estimateSource ?? "none",
+    usedLastCleanWindow: diagnostics.usedLastCleanWindow ?? false,
   };
 }
 
@@ -152,6 +185,86 @@ function autocorrelationAtLag(values: number[], lag: number) {
   return denominator > 0 ? numerator / denominator : 0;
 }
 
+function clampScore(value: number) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function estimateFrequencyCandidate(
+  values: number[],
+  samples: PpgSample[],
+) {
+  const pointCount = Math.min(values.length, samples.length);
+
+  if (pointCount < 2) {
+    return {
+      bpm: null,
+      strength: 0,
+    };
+  }
+
+  const signalPower = values
+    .slice(0, pointCount)
+    .reduce((sum, value) => sum + value ** 2, 0);
+
+  if (signalPower <= 0) {
+    return {
+      bpm: null,
+      strength: 0,
+    };
+  }
+
+  const startedAt = samples[0].t;
+  let bestBpm: number | null = null;
+  let bestStrength = 0;
+
+  for (let bpm = MIN_BPM; bpm <= MAX_BPM; bpm += 1) {
+    const angularFrequency = (2 * Math.PI * bpm) / 60;
+    let real = 0;
+    let imaginary = 0;
+
+    for (let index = 0; index < pointCount; index += 1) {
+      const elapsedSeconds = (samples[index].t - startedAt) / 1000;
+      const phase = angularFrequency * elapsedSeconds;
+      real += values[index] * Math.cos(phase);
+      imaginary -= values[index] * Math.sin(phase);
+    }
+
+    const magnitude = Math.sqrt(real ** 2 + imaginary ** 2);
+    const strength = magnitude / Math.sqrt(signalPower * pointCount);
+
+    if (strength > bestStrength) {
+      bestStrength = strength;
+      bestBpm = bpm;
+    }
+  }
+
+  return {
+    bpm: bestBpm,
+    strength: clampScore(bestStrength),
+  };
+}
+
+function candidatesAgree(
+  rawBpmCandidate: number | null,
+  frequencyBpmCandidate: number | null,
+) {
+  if (rawBpmCandidate === null || frequencyBpmCandidate === null) {
+    return false;
+  }
+
+  const directGap = Math.abs(rawBpmCandidate - frequencyBpmCandidate);
+  const rawHalfGap = Math.abs(rawBpmCandidate / 2 - frequencyBpmCandidate);
+  const frequencyHalfGap = Math.abs(frequencyBpmCandidate / 2 - rawBpmCandidate);
+
+  return (
+    directGap <= MAX_CONFIRMATION_GAP_BPM ||
+    (rawBpmCandidate > HARMONIC_CORRECTION_BPM &&
+      rawHalfGap <= MAX_CONFIRMATION_GAP_BPM) ||
+    (frequencyBpmCandidate > HARMONIC_CORRECTION_BPM &&
+      frequencyHalfGap <= MAX_CONFIRMATION_GAP_BPM)
+  );
+}
+
 function getConfidence(score: number): PulseEstimateConfidence {
   if (score >= 0.52) {
     return "good";
@@ -227,20 +340,32 @@ export function estimatePulseFromSamples({
   normalizedSignal,
   samples,
   signalQuality,
+  usedLastCleanWindow = false,
 }: EstimatePulseOptions): PulseEstimate {
   const durationMs = getDurationMs(samples);
 
   if (durationMs < MIN_DURATION_MS || samples.length < 120) {
-    return emptyEstimate("Keep holding steady for a longer signal window.");
+    return emptyEstimate("Keep holding steady for a longer signal window.", {
+      usedLastCleanWindow,
+    });
   }
 
-  if (!fingerDetected || signalQuality === "no-signal") {
-    return emptyEstimate("Need cleaner signal before estimating pulse.");
+  if (
+    (!fingerDetected && !usedLastCleanWindow) ||
+    signalQuality === "no-signal" ||
+    signalQuality === "too-dark" ||
+    signalQuality === "too-bright"
+  ) {
+    return emptyEstimate("Need cleaner signal before estimating pulse.", {
+      usedLastCleanWindow,
+    });
   }
 
   const fps = estimateFps(samples);
   if (fps <= 0) {
-    return emptyEstimate("Need cleaner timing before estimating pulse.");
+    return emptyEstimate("Need cleaner timing before estimating pulse.", {
+      usedLastCleanWindow,
+    });
   }
 
   const rawSignal = selectSignal(samples, normalizedSignal);
@@ -252,7 +377,9 @@ export function estimatePulseFromSamples({
   );
 
   if (maxLag <= minLag) {
-    return emptyEstimate("Need a longer signal before estimating pulse.");
+    return emptyEstimate("Need a longer signal before estimating pulse.", {
+      usedLastCleanWindow,
+    });
   }
 
   let bestLag = minLag;
@@ -266,18 +393,56 @@ export function estimatePulseFromSamples({
     }
   }
 
-  const confidenceScore = Math.max(0, Math.min(1, bestScore));
+  const rawBpmCandidate = Math.round((60 * fps) / bestLag);
+  const frequencyCandidate = estimateFrequencyCandidate(
+    processedSignal,
+    samples,
+  );
+  const confidenceScore = clampScore(bestScore);
+
   if (confidenceScore < MIN_CORRELATION) {
+    const canUseFrequencyConfirmation =
+      durationMs >= LOW_CONFIDENCE_MIN_DURATION_MS &&
+      samples.length >= MIN_LOW_CONFIDENCE_SAMPLES &&
+      confidenceScore >= MIN_WEAK_CORRELATION &&
+      frequencyCandidate.bpm !== null &&
+      frequencyCandidate.strength >= MIN_FREQUENCY_STRENGTH &&
+      candidatesAgree(rawBpmCandidate, frequencyCandidate.bpm);
+
+    if (canUseFrequencyConfirmation && frequencyCandidate.bpm !== null) {
+      return {
+        bpm: frequencyCandidate.bpm,
+        confidence: "low",
+        confidenceScore: clampScore(
+          Math.max(confidenceScore, frequencyCandidate.strength),
+        ),
+        method: "autocorrelation",
+        message: "Keep holding steady for a better estimate.",
+        rawBpmCandidate,
+        correctedBpm: frequencyCandidate.bpm,
+        harmonicCorrected: false,
+        autocorrelationStrength: confidenceScore,
+        frequencyBpmCandidate: frequencyCandidate.bpm,
+        frequencyStrength: frequencyCandidate.strength,
+        estimateSource: "frequency-confirmed",
+        usedLastCleanWindow,
+      };
+    }
+
     return {
       bpm: null,
       confidence: "low",
       confidenceScore,
       method: "autocorrelation",
       message: "Need cleaner signal before estimating pulse.",
-      rawBpmCandidate: Math.round((60 * fps) / bestLag),
+      rawBpmCandidate,
       correctedBpm: null,
       harmonicCorrected: false,
       autocorrelationStrength: confidenceScore,
+      frequencyBpmCandidate: frequencyCandidate.bpm,
+      frequencyStrength: frequencyCandidate.strength,
+      estimateSource: "none",
+      usedLastCleanWindow,
     };
   }
 
@@ -288,7 +453,6 @@ export function estimatePulseFromSamples({
     maxLag,
     processedSignal,
   });
-  const rawBpmCandidate = Math.round((60 * fps) / bestLag);
   const correctedBpm = Math.round((60 * fps) / correctedCandidate.selectedLag);
   const brightnessRange = getBrightnessRange(samples);
   const artifactAdjustedScore =
@@ -308,7 +472,7 @@ export function estimatePulseFromSamples({
   const message = hasBrightnessArtifact
     ? "Signal changed sharply. Hold your finger steadier for a cleaner estimate."
     : confidence === "low"
-      ? "Keep holding steady while the estimate settles."
+      ? "Keep holding steady for a better estimate."
       : "Non-medical estimate available from the current signal.";
 
   return {
@@ -320,9 +484,10 @@ export function estimatePulseFromSamples({
     rawBpmCandidate,
     correctedBpm,
     harmonicCorrected: correctedCandidate.harmonicCorrected,
-    autocorrelationStrength: Math.max(
-      0,
-      Math.min(1, correctedCandidate.selectedScore),
-    ),
+    autocorrelationStrength: clampScore(correctedCandidate.selectedScore),
+    frequencyBpmCandidate: frequencyCandidate.bpm,
+    frequencyStrength: frequencyCandidate.strength,
+    estimateSource: "autocorrelation",
+    usedLastCleanWindow,
   };
 }
