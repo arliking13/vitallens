@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/shared/components/Button";
 import { InfoRow } from "@/shared/components/InfoRow";
@@ -14,6 +14,7 @@ import {
   downloadPpgDebugReport,
 } from "../lib/ppgDebugReport";
 import { usePulseFrameSampler } from "../hooks/usePulseFrameSampler";
+import type { CameraStatus, TorchState } from "../hooks/useRearCamera";
 import { useRearCamera } from "../hooks/useRearCamera";
 
 type PulseCheckViewProps = {
@@ -72,14 +73,32 @@ const signalQualityRowTones = {
   good: "brand",
 } as const;
 
+const pulseConfidenceLabels = {
+  low: "Low",
+  fair: "Fair",
+  good: "Good",
+};
+
+const pulseConfidenceRowTones = {
+  low: "warning",
+  fair: "pulse",
+  good: "brand",
+} as const;
+
 export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [cameraStatusAtStart, setCameraStatusAtStart] =
+    useState<CameraStatus | null>(null);
+  const [torchStateAtStart, setTorchStateAtStart] = useState<TorchState | null>(
+    null,
+  );
   const { error, startCamera, status, stopCamera, stream, torchState } =
     useRearCamera();
   const {
     durationMs,
     fingerDetected,
     error: samplingError,
+    pulseEstimate,
     qualityMessage,
     resetSamples,
     samples,
@@ -97,6 +116,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
   const showTorchStatus = torchState !== "unsupported";
   const canExportSignalData =
     samples.length > 0 && durationMs >= MIN_EXPORT_DURATION_MS && startedAt !== null;
+  const hasPulseEstimate = pulseEstimate.bpm !== null;
 
   function handleCameraButtonClick() {
     if (isCameraReady) {
@@ -106,7 +126,23 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
     }
 
     resetSamples();
+    setCameraStatusAtStart(null);
+    setTorchStateAtStart(null);
     startCamera();
+  }
+
+  function handleSignalButtonClick() {
+    if (isSampling) {
+      stopSampling();
+      return;
+    }
+
+    if (samples.length === 0 || startedAt === null) {
+      setCameraStatusAtStart(status);
+      setTorchStateAtStart(torchState);
+    }
+
+    startSampling();
   }
 
   function handleExportSignalData() {
@@ -115,13 +151,20 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
     }
 
     const report = buildPpgDebugReport({
-      cameraStatus: status,
+      cameraStatusAtExport: status,
+      cameraStatusAtStart: cameraStatusAtStart ?? status,
       fingerDetected,
-      notes: [qualityMessage, `Signal quality: ${signalQuality}`],
+      notes: [
+        qualityMessage,
+        pulseEstimate.message,
+        `Signal quality: ${signalQuality}`,
+      ],
+      pulseEstimate,
       samples,
       sessionId,
       startedAt,
-      torchState,
+      torchStateAtExport: torchState,
+      torchStateAtStart: torchStateAtStart ?? torchState,
     });
 
     downloadPpgDebugReport(report);
@@ -212,6 +255,29 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
           tone="neutral"
           value={String(samples.length)}
         />
+        {hasPulseEstimate ? (
+          <InfoRow
+            delayMs={280}
+            detail={`Non-medical estimate · Confidence: ${
+              pulseConfidenceLabels[pulseEstimate.confidence]
+            }`}
+            label="Estimated pulse"
+            tone={pulseConfidenceRowTones[pulseEstimate.confidence]}
+            value={`${pulseEstimate.bpm} BPM`}
+          />
+        ) : (
+          <InfoRow
+            delayMs={280}
+            detail={pulseEstimate.message}
+            label="Estimate status"
+            tone="warning"
+            value={
+              pulseEstimate.message.toLowerCase().includes("cleaner")
+                ? "Need cleaner signal"
+                : "Keep holding steady"
+            }
+          />
+        )}
       </div>
 
       <div className="pt-4">
@@ -239,7 +305,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         <Button
           className="w-full"
           disabled={!isCameraReady}
-          onClick={isSampling ? stopSampling : startSampling}
+          onClick={handleSignalButtonClick}
           variant="secondary"
         >
           {isSampling ? "Stop signal" : "Start signal"}

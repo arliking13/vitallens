@@ -1,4 +1,5 @@
 import type { CameraStatus, TorchState } from "../hooks/useRearCamera";
+import type { PulseEstimate } from "./pulseEstimator";
 import type { PpgSample } from "./ppgSampler";
 
 export type PpgDebugSample = PpgSample & {
@@ -25,20 +26,26 @@ export type PpgDebugReport = {
   durationMs: number;
   sampleCount: number;
   estimatedFps: number;
-  cameraStatus: CameraStatus;
-  torchState: TorchState;
+  cameraStatusAtStart: CameraStatus;
+  cameraStatusAtExport: CameraStatus;
+  torchStateAtStart: TorchState;
+  torchStateAtExport: TorchState;
+  pulseEstimate: PulseEstimate;
   samples: PpgDebugSample[];
   quality: PpgDebugQuality;
 };
 
 type BuildPpgDebugReportOptions = {
-  cameraStatus: CameraStatus;
+  cameraStatusAtExport: CameraStatus;
+  cameraStatusAtStart: CameraStatus;
   fingerDetected: boolean;
   notes?: string[];
+  pulseEstimate: PulseEstimate;
   samples: PpgSample[];
   sessionId: string;
   startedAt: string;
-  torchState: TorchState;
+  torchStateAtExport: TorchState;
+  torchStateAtStart: TorchState;
 };
 
 function average(values: number[]) {
@@ -140,13 +147,16 @@ function buildFileTimestamp(startedAt: string) {
 }
 
 export function buildPpgDebugReport({
-  cameraStatus,
+  cameraStatusAtExport,
+  cameraStatusAtStart,
   fingerDetected,
   notes = [],
+  pulseEstimate,
   samples,
   sessionId,
   startedAt,
-  torchState,
+  torchStateAtExport,
+  torchStateAtStart,
 }: BuildPpgDebugReportOptions): PpgDebugReport {
   const greenValues = samples.map((sample) => sample.green);
   const brightnessValues = samples.map((sample) => sample.brightness);
@@ -161,8 +171,14 @@ export function buildPpgDebugReport({
     durationMs: formatNumber(durationMs),
     sampleCount: samples.length,
     estimatedFps: formatNumber(getEstimatedFps(samples, durationMs)),
-    cameraStatus,
-    torchState,
+    cameraStatusAtStart,
+    cameraStatusAtExport,
+    torchStateAtStart,
+    torchStateAtExport,
+    pulseEstimate: {
+      ...pulseEstimate,
+      confidenceScore: formatNumber(pulseEstimate.confidenceScore),
+    },
     samples: samples.map((sample, index) => ({
       t: formatNumber(sample.t),
       red: formatNumber(sample.red),
@@ -202,4 +218,3 @@ export function downloadPpgDebugReport(report: PpgDebugReport) {
   link.remove();
   URL.revokeObjectURL(url);
 }
-

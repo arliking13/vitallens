@@ -9,6 +9,10 @@ import {
   type PulseSignalQuality,
 } from "@/features/pulse/lib/pulseQuality";
 import {
+  estimatePulseFromSamples,
+  type PulseEstimate,
+} from "@/features/pulse/lib/pulseEstimator";
+import {
   buildLiveSignal,
   type PpgSample,
   readPpgSample,
@@ -25,6 +29,11 @@ const SAMPLE_INTERVAL_MS = 40;
 const MAX_STORED_SAMPLES = 600;
 const SMOOTHING_WINDOW_SIZE = 5;
 const initialQuality = analyzePulseSignalQuality([]);
+const initialPulseEstimate = estimatePulseFromSamples({
+  fingerDetected: initialQuality.fingerDetected,
+  samples: [],
+  signalQuality: initialQuality.signalQuality,
+});
 
 function createSessionId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -66,6 +75,8 @@ export function usePulseFrameSampler({
   const [qualityMessage, setQualityMessage] = useState(
     initialQuality.qualityMessage,
   );
+  const [pulseEstimate, setPulseEstimate] =
+    useState<PulseEstimate>(initialPulseEstimate);
   const [sessionId, setSessionId] = useState(createSessionId);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [durationMs, setDurationMs] = useState(0);
@@ -100,6 +111,13 @@ export function usePulseFrameSampler({
     setSignalQuality(nextQuality.signalQuality);
     setFingerDetected(nextQuality.fingerDetected);
     setQualityMessage(nextQuality.qualityMessage);
+    setPulseEstimate(
+      estimatePulseFromSamples({
+        fingerDetected: nextQuality.fingerDetected,
+        samples: [],
+        signalQuality: nextQuality.signalQuality,
+      }),
+    );
     setSessionId(createSessionId());
     setStartedAt(null);
     setDurationMs(0);
@@ -138,6 +156,12 @@ export function usePulseFrameSampler({
         SMOOTHING_WINDOW_SIZE,
       );
       const nextQuality = analyzePulseSignalQuality(nextSamples);
+      const nextPulseEstimate = estimatePulseFromSamples({
+        fingerDetected: nextQuality.fingerDetected,
+        normalizedSignal: nextLiveSignal,
+        samples: nextSamples,
+        signalQuality: nextQuality.signalQuality,
+      });
 
       setSamples(nextSamples);
       setLiveSignal(nextLiveSignal);
@@ -145,6 +169,7 @@ export function usePulseFrameSampler({
       setSignalQuality(nextQuality.signalQuality);
       setFingerDetected(nextQuality.fingerDetected);
       setQualityMessage(nextQuality.qualityMessage);
+      setPulseEstimate(nextPulseEstimate);
       setDurationMs(getSampleDurationMs(nextSamples));
     } catch (samplingError) {
       clearSamplingTimer();
@@ -201,6 +226,7 @@ export function usePulseFrameSampler({
     signalQuality,
     fingerDetected,
     qualityMessage,
+    pulseEstimate,
     sessionId,
     startedAt,
     durationMs,
