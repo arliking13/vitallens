@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, RefObject } from "react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import type { FingerGateState } from "@/features/pulse/lib/fingerGate";
 import type { CameraStatus } from "@/features/pulse/hooks/useRearCamera";
@@ -10,6 +10,11 @@ type CameraPreviewProps = {
   delayMs?: number;
   fingerGateState?: FingerGateState;
   isSampling?: boolean;
+  liveSignal?: number[];
+  scannerDetail?: string;
+  scannerLabel?: string;
+  scannerTitle?: string;
+  showCameraPreview?: boolean;
   status: CameraStatus;
   stream: MediaStream | null;
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -17,11 +22,6 @@ type CameraPreviewProps = {
 
 type AnimationStyle = CSSProperties & {
   "--card-delay"?: string;
-};
-
-type PreviewPreference = {
-  enabled: boolean;
-  stream: MediaStream | null;
 };
 
 const emptyStateCopy: Record<CameraStatus, string> = {
@@ -113,28 +113,60 @@ function getScannerCopy({
   return scannerCopy[status];
 }
 
+function clampSignalValue(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
+function buildFlatPath() {
+  return "M4 38 C42 38 66 38 92 38 C118 38 142 38 168 38 C194 38 216 38 236 38";
+}
+
+function buildSignalPath(values: number[]) {
+  if (values.length < 2) {
+    return buildFlatPath();
+  }
+
+  const width = 232;
+  const startX = 4;
+  const baseY = 50;
+  const amplitude = 36;
+  const stepX = width / (values.length - 1);
+  const points = values.map((value, index) => ({
+    x: startX + stepX * index,
+    y: baseY - clampSignalValue(value) * amplitude,
+  }));
+
+  return points.slice(1).reduce((path, point, index) => {
+    const previousPoint = points[index];
+    const controlX = (previousPoint.x + point.x) / 2;
+    return `${path} C ${controlX} ${previousPoint.y} ${controlX} ${point.y} ${point.x} ${point.y}`;
+  }, `M${points[0].x} ${points[0].y}`);
+}
+
 export function CameraPreview({
   delayMs = 40,
   fingerGateState,
   isSampling = false,
+  liveSignal,
+  scannerDetail,
+  scannerLabel,
+  scannerTitle,
+  showCameraPreview = false,
   status,
   stream,
   videoRef,
 }: CameraPreviewProps) {
-  const [previewPreference, setPreviewPreference] =
-    useState<PreviewPreference>({
-      enabled: false,
-      stream: null,
-    });
   const hasStream = stream !== null;
-  const showCameraPreview =
-    previewPreference.enabled && previewPreference.stream === stream;
   const shouldShowRawPreview = hasStream && showCameraPreview;
   const copy = getScannerCopy({
     fingerGateState,
     isSampling,
     status,
   });
+  const title = scannerTitle ?? copy.title;
+  const detail = scannerDetail ?? copy.detail;
+  const label = scannerLabel ?? (hasStream ? copy.label : emptyStateCopy[status]);
+  const signalPath = buildSignalPath(liveSignal ?? []);
   const animationStyle: AnimationStyle = {
     "--card-delay": `${delayMs}ms`,
   };
@@ -154,10 +186,10 @@ export function CameraPreview({
 
   return (
     <div
-      className="animate-card-in overflow-hidden rounded-[24px] border border-[#E5EAE4] bg-white p-4 shadow-[0_18px_48px_rgba(28,37,32,0.055)]"
+      className="animate-card-in overflow-hidden rounded-[24px] border border-[#E5EAE4] bg-white p-3 shadow-[0_18px_48px_rgba(28,37,32,0.055)]"
       style={animationStyle}
     >
-      <div className="flex items-center justify-between gap-3 px-1 pb-4">
+      <div className="flex items-center justify-between gap-3 px-2 pb-3">
         <div>
           <p className="text-sm font-semibold text-[#1C2520]">Camera check</p>
           <p className="mt-1 text-sm leading-5 text-[#66706A]">
@@ -165,11 +197,11 @@ export function CameraPreview({
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-[#F5F7F4] px-3 py-1.5 text-xs font-semibold text-[#66706A]">
-          {hasStream ? copy.label : emptyStateCopy[status]}
+          {label}
         </span>
       </div>
 
-      <div className="relative h-60 overflow-hidden rounded-[22px] bg-[#111815]">
+      <div className="relative overflow-hidden rounded-[22px] bg-[#111815] px-5 pb-4 pt-6">
         <video
           aria-hidden={!shouldShowRawPreview}
           aria-label={
@@ -191,7 +223,7 @@ export function CameraPreview({
 
         <div
           className={[
-            "scanner-surface absolute inset-0 z-10 grid place-items-center overflow-hidden px-8 text-center transition-opacity duration-200",
+            "scanner-surface relative z-10 text-center transition-opacity duration-200",
             shouldShowRawPreview ? "opacity-0" : "opacity-100",
           ].join(" ")}
         >
@@ -205,17 +237,46 @@ export function CameraPreview({
           />
           <div className="relative">
             <div
-              className="scanner-ring mx-auto grid h-28 w-28 place-items-center rounded-full border border-[#E97E7E]/35 bg-white/[0.035] shadow-[0_0_44px_rgba(233,126,126,0.18)]"
+              className="scanner-ring mx-auto grid h-24 w-24 place-items-center rounded-full border border-[#E97E7E]/35 bg-white/[0.035] shadow-[0_0_44px_rgba(233,126,126,0.18)]"
               aria-hidden="true"
             >
-              <div className="h-20 w-20 rounded-full border border-white/10 bg-[#E97E7E]/8 shadow-[inset_0_0_32px_rgba(233,126,126,0.16)]" />
+              <div className="h-[4.5rem] w-[4.5rem] rounded-full border border-white/10 bg-[#E97E7E]/8 shadow-[inset_0_0_32px_rgba(233,126,126,0.16)]" />
             </div>
-            <p className="mt-6 text-base font-semibold text-white">
-              {copy.title}
+            <p className="mt-4 text-base font-semibold text-white">
+              {title}
             </p>
             <p className="mx-auto mt-2 max-w-64 text-sm leading-6 text-white/64">
-              {copy.detail}
+              {detail}
             </p>
+            <div
+              className="signal-preview signal-pulse relative mt-4 h-16 overflow-hidden rounded-[18px] border border-white/8 bg-white/[0.035]"
+              aria-hidden="true"
+            >
+              <div className="signal-glow absolute left-1/2 top-2 h-12 w-24 -translate-x-1/2 rounded-full bg-[#E97E7E]/12 blur-2xl" />
+              <svg
+                className="signal-wave absolute inset-x-3 bottom-1 h-14"
+                preserveAspectRatio="none"
+                viewBox="0 0 240 64"
+              >
+                <path
+                  d={signalPath}
+                  fill="none"
+                  opacity="0.18"
+                  stroke="#E97E7E"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="12"
+                />
+                <path
+                  d={signalPath}
+                  fill="none"
+                  stroke="#E97E7E"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="5"
+                />
+              </svg>
+            </div>
           </div>
         </div>
 
@@ -224,23 +285,6 @@ export function CameraPreview({
             Debug preview
           </div>
         ) : null}
-      </div>
-
-      <div className="mt-3 flex justify-end px-1">
-        <button
-          aria-pressed={showCameraPreview}
-          className="interactive-press rounded-full border border-[#E5EAE4] bg-[#F5F7F4] px-3 py-1.5 text-xs font-semibold text-[#66706A]"
-          disabled={!hasStream}
-          onClick={() => {
-            setPreviewPreference({
-              enabled: !shouldShowRawPreview,
-              stream,
-            });
-          }}
-          type="button"
-        >
-          {shouldShowRawPreview ? "Hide camera preview" : "Show camera preview"}
-        </button>
       </div>
     </div>
   );
