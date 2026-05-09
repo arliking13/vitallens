@@ -178,6 +178,9 @@ export function buildPpgDebugReport({
     pulseEstimate: {
       ...pulseEstimate,
       confidenceScore: formatNumber(pulseEstimate.confidenceScore),
+      autocorrelationStrength: formatNumber(
+        pulseEstimate.autocorrelationStrength,
+      ),
     },
     samples: samples.map((sample, index) => ({
       t: formatNumber(sample.t),

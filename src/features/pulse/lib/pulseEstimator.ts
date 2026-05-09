@@ -10,6 +10,10 @@ export type PulseEstimate = {
   confidenceScore: number;
   method: "autocorrelation";
   message: string;
+  rawBpmCandidate: number | null;
+  correctedBpm: number | null;
+  harmonicCorrected: boolean;
+  autocorrelationStrength: number;
 };
 
 type EstimatePulseOptions = {
@@ -23,6 +27,8 @@ const MIN_DURATION_MS = 15000;
 const MIN_BPM = 45;
 const MAX_BPM = 160;
 const MIN_CORRELATION = 0.24;
+const HARMONIC_CORRECTION_BPM = 120;
+const BRIGHTNESS_ARTIFACT_RANGE = 30;
 
 function emptyEstimate(message: string): PulseEstimate {
   return {
@@ -31,6 +37,10 @@ function emptyEstimate(message: string): PulseEstimate {
     confidenceScore: 0,
     method: "autocorrelation",
     message,
+    rawBpmCandidate: null,
+    correctedBpm: null,
+    harmonicCorrected: false,
+    autocorrelationStrength: 0,
   };
 }
 
@@ -48,6 +58,10 @@ function range(values: number[]) {
   }
 
   return Math.max(...values) - Math.min(...values);
+}
+
+function getBrightnessRange(samples: PpgSample[]) {
+  return range(samples.map((sample) => sample.brightness));
 }
 
 function standardDeviation(values: number[]) {
@@ -108,13 +122,17 @@ function selectSignal(samples: PpgSample[], normalizedSignal?: number[]) {
 }
 
 function preprocessSignal(values: number[], fps: number) {
-  const shortWindow = Math.max(3, Math.round(fps * 0.16));
-  const baselineWindow = Math.max(shortWindow + 2, Math.round(fps * 1.6));
-  const smoothed = movingAverage(values, shortWindow);
-  const baseline = movingAverage(smoothed, baselineWindow);
-  const detrended = smoothed.map((value, index) => value - baseline[index]);
+  const highFrequencyWindow = Math.max(3, Math.round(fps * 0.12));
+  const baselineWindow = Math.max(
+    highFrequencyWindow + 2,
+    Math.round(fps * 1.8),
+  );
+  const firstPass = movingAverage(values, highFrequencyWindow);
+  const baseline = movingAverage(firstPass, baselineWindow);
+  const detrended = firstPass.map((value, index) => value - baseline[index]);
+  const smoothedDetrended = movingAverage(detrended, highFrequencyWindow);
 
-  return normalizeToZeroMean(detrended);
+  return normalizeToZeroMean(smoothedDetrended);
 }
 
 function autocorrelationAtLag(values: number[], lag: number) {
@@ -146,6 +164,64 @@ function getConfidence(score: number): PulseEstimateConfidence {
   return "low";
 }
 
+function limitConfidence(
+  confidence: PulseEstimateConfidence,
+  maxConfidence: PulseEstimateConfidence,
+) {
+  const confidenceRank: Record<PulseEstimateConfidence, number> = {
+    low: 0,
+    fair: 1,
+    good: 2,
+  };
+
+  return confidenceRank[confidence] <= confidenceRank[maxConfidence]
+    ? confidence
+    : maxConfidence;
+}
+
+function maybeApplyHarmonicCorrection({
+  bestLag,
+  bestScore,
+  fps,
+  maxLag,
+  processedSignal,
+}: {
+  bestLag: number;
+  bestScore: number;
+  fps: number;
+  maxLag: number;
+  processedSignal: number[];
+}) {
+  const rawBpm = (60 * fps) / bestLag;
+  const halfLag = bestLag * 2;
+
+  if (rawBpm <= HARMONIC_CORRECTION_BPM || halfLag > maxLag) {
+    return {
+      selectedLag: bestLag,
+      selectedScore: bestScore,
+      harmonicCorrected: false,
+    };
+  }
+
+  const halfScore = autocorrelationAtLag(processedSignal, halfLag);
+  const halfScoreIsReasonable =
+    halfScore >= MIN_CORRELATION && halfScore >= bestScore * 0.5;
+
+  if (!halfScoreIsReasonable) {
+    return {
+      selectedLag: bestLag,
+      selectedScore: bestScore,
+      harmonicCorrected: false,
+    };
+  }
+
+  return {
+    selectedLag: halfLag,
+    selectedScore: halfScore,
+    harmonicCorrected: true,
+  };
+}
+
 export function estimatePulseFromSamples({
   fingerDetected,
   normalizedSignal,
@@ -169,10 +245,10 @@ export function estimatePulseFromSamples({
 
   const rawSignal = selectSignal(samples, normalizedSignal);
   const processedSignal = preprocessSignal(rawSignal, fps);
-  const minLag = Math.max(1, Math.round((fps * 60) / MAX_BPM));
+  const minLag = Math.max(1, Math.ceil((fps * 60) / MAX_BPM));
   const maxLag = Math.min(
     processedSignal.length - 2,
-    Math.round((fps * 60) / MIN_BPM),
+    Math.floor((fps * 60) / MIN_BPM),
   );
 
   if (maxLag <= minLag) {
@@ -198,21 +274,55 @@ export function estimatePulseFromSamples({
       confidenceScore,
       method: "autocorrelation",
       message: "Need cleaner signal before estimating pulse.",
+      rawBpmCandidate: Math.round((60 * fps) / bestLag),
+      correctedBpm: null,
+      harmonicCorrected: false,
+      autocorrelationStrength: confidenceScore,
     };
   }
 
-  const bpm = Math.round((60 * fps) / bestLag);
-  const confidence = getConfidence(confidenceScore);
+  const correctedCandidate = maybeApplyHarmonicCorrection({
+    bestLag,
+    bestScore,
+    fps,
+    maxLag,
+    processedSignal,
+  });
+  const rawBpmCandidate = Math.round((60 * fps) / bestLag);
+  const correctedBpm = Math.round((60 * fps) / correctedCandidate.selectedLag);
+  const brightnessRange = getBrightnessRange(samples);
+  const artifactAdjustedScore =
+    brightnessRange > BRIGHTNESS_ARTIFACT_RANGE
+      ? correctedCandidate.selectedScore * 0.78
+      : correctedCandidate.selectedScore;
+  const adjustedConfidenceScore = Math.max(
+    0,
+    Math.min(1, artifactAdjustedScore),
+  );
+  const hasBrightnessArtifact = brightnessRange > BRIGHTNESS_ARTIFACT_RANGE;
+  let confidence = getConfidence(adjustedConfidenceScore);
+
+  if (correctedCandidate.harmonicCorrected || hasBrightnessArtifact) {
+    confidence = limitConfidence(confidence, "fair");
+  }
+  const message = hasBrightnessArtifact
+    ? "Signal changed sharply. Hold your finger steadier for a cleaner estimate."
+    : confidence === "low"
+      ? "Keep holding steady while the estimate settles."
+      : "Non-medical estimate available from the current signal.";
 
   return {
-    bpm,
+    bpm: correctedBpm,
     confidence,
-    confidenceScore,
+    confidenceScore: adjustedConfidenceScore,
     method: "autocorrelation",
-    message:
-      confidence === "low"
-        ? "Keep holding steady while the estimate settles."
-        : "Non-medical estimate available from the current signal.",
+    message,
+    rawBpmCandidate,
+    correctedBpm,
+    harmonicCorrected: correctedCandidate.harmonicCorrected,
+    autocorrelationStrength: Math.max(
+      0,
+      Math.min(1, correctedCandidate.selectedScore),
+    ),
   };
 }
-

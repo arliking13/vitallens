@@ -82,6 +82,7 @@ export function analyzePulseSignalQuality(
   const brightnessAverage = average(brightnessValues);
   const brightnessStdDev = Math.sqrt(variance(brightnessValues));
   const brightnessChange = averageStepChange(brightnessValues);
+  const brightnessRange = range(brightnessValues);
   const greenRange = range(greenValues);
   const fingerDetected = hasFingerColorProfile(recentSamples, brightnessAverage);
 
@@ -109,15 +110,25 @@ export function analyzePulseSignalQuality(
     };
   }
 
-  if (brightnessStdDev > 28 || brightnessChange > 16) {
+  if (
+    brightnessRange > 30 ||
+    brightnessStdDev > 28 ||
+    brightnessChange > 16
+  ) {
     return {
       fingerDetected: true,
-      qualityMessage: "Keep your finger still while the signal settles.",
+      qualityMessage:
+        "Signal changed sharply. Hold your finger steadier for a cleaner estimate.",
       signalQuality: "unstable",
     };
   }
 
-  if (recentSamples.length >= 80 && greenRange >= 3 && brightnessStdDev < 18) {
+  if (
+    recentSamples.length >= 80 &&
+    greenRange >= 3 &&
+    brightnessRange <= 30 &&
+    brightnessStdDev < 18
+  ) {
     return {
       fingerDetected: true,
       qualityMessage: "Signal looks steady enough for the next step.",
@@ -131,4 +142,3 @@ export function analyzePulseSignalQuality(
     signalQuality: "fair",
   };
 }
-
