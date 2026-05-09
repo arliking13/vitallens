@@ -87,7 +87,8 @@ export function usePulseFrameSampler({
   const [signalQuality, setSignalQuality] = useState<PulseSignalQuality>(
     initialQuality.signalQuality,
   );
-  const [fingerDetected, setFingerDetected] = useState(
+  const [currentFingerDetected, setCurrentFingerDetected] = useState(false);
+  const [cleanWindowFingerDetected, setCleanWindowFingerDetected] = useState(
     initialQuality.fingerDetected,
   );
   const [qualityMessage, setQualityMessage] = useState(
@@ -139,7 +140,8 @@ export function usePulseFrameSampler({
     setLiveSignal([]);
     setSmoothedSignal([]);
     setSignalQuality(nextQuality.signalQuality);
-    setFingerDetected(nextQuality.fingerDetected);
+    setCurrentFingerDetected(false);
+    setCleanWindowFingerDetected(nextQuality.fingerDetected);
     setQualityMessage(nextQuality.qualityMessage);
     setPulseEstimate(
       estimatePulseFromSamples({
@@ -173,7 +175,8 @@ export function usePulseFrameSampler({
     setLiveSignal([]);
     setSmoothedSignal([]);
     setSignalQuality(nextQuality.signalQuality);
-    setFingerDetected(nextQuality.fingerDetected);
+    setCurrentFingerDetected(false);
+    setCleanWindowFingerDetected(nextQuality.fingerDetected);
     setQualityMessage("Restarting clean signal window");
     setPulseEstimate(
       estimatePulseFromSamples({
@@ -215,7 +218,7 @@ export function usePulseFrameSampler({
       setLiveSignal(nextLiveSignal);
       setSmoothedSignal(nextSmoothedSignal);
       setSignalQuality(nextQuality.signalQuality);
-      setFingerDetected(nextQuality.fingerDetected);
+      setCleanWindowFingerDetected(nextQuality.fingerDetected);
       setQualityMessage(nextQuality.qualityMessage);
       setPulseEstimate(nextPulseEstimate);
       setRecordingStartedAt(nextRecordingStartedAt);
@@ -278,7 +281,7 @@ export function usePulseFrameSampler({
 
       if (!gateDecision.shouldRecord) {
         setIgnoredFrameCount((count) => count + 1);
-        setFingerDetected(gateDecision.covered);
+        setCurrentFingerDetected(gateDecision.covered);
         if (gateDecision.shouldResetSession) {
           setQualityMessage("Restarting clean signal window");
         } else if (!gateDecision.shouldTrimRecentSamples) {
@@ -295,6 +298,7 @@ export function usePulseFrameSampler({
         }
       }
 
+      setCurrentFingerDetected(true);
       const nextSamples = [...samplesRef.current, sample].slice(
         -MAX_STORED_SAMPLES,
       );
@@ -362,7 +366,8 @@ export function usePulseFrameSampler({
     liveSignal,
     smoothedSignal,
     signalQuality,
-    fingerDetected,
+    currentFingerDetected,
+    cleanWindowFingerDetected,
     qualityMessage,
     pulseEstimate,
     sessionId,

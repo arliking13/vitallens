@@ -117,9 +117,10 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
     useRearCamera();
   const {
     cleanWindowDurationMs,
+    cleanWindowFingerDetected,
     currentWindowValidSampleCount,
+    currentFingerDetected,
     fingerGateState,
-    fingerDetected,
     error: samplingError,
     lastFingerLostAt,
     pulseEstimate,
@@ -146,6 +147,13 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
     cleanWindowDurationMs >= MIN_EXPORT_DURATION_MS &&
     startedAt !== null;
   const hasPulseEstimate = pulseEstimate.bpm !== null;
+  const currentFingerStateNote =
+    fingerGateState === "finger-lost"
+      ? "Finger moved"
+      : fingerGateLabels[fingerGateState];
+  const estimateStateNote = pulseEstimate.usedLastCleanWindow
+    ? "Using last clean window"
+    : "Using current clean window";
 
   function handleCameraButtonClick() {
     if (isCameraReady) {
@@ -182,10 +190,13 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
     const report = buildPpgDebugReport({
       cameraStatusAtExport: status,
       cameraStatusAtStart: cameraStatusAtStart ?? status,
-      fingerDetected,
+      cleanWindowFingerDetected,
+      currentFingerDetected,
       fingerGateState,
       lastFingerLostAt,
       notes: [
+        `Current state: ${currentFingerStateNote}`,
+        `Estimate state: ${estimateStateNote}`,
         qualityMessage,
         pulseEstimate.message,
         `Signal quality: ${signalQuality}`,
@@ -199,6 +210,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
       torchStateAtStart: torchStateAtStart ?? torchState,
       totalFingerLostCount,
       totalIgnoredFrameCount,
+      usedLastCleanWindow: pulseEstimate.usedLastCleanWindow,
     });
 
     downloadPpgDebugReport(report);
@@ -301,7 +313,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
             detail={
               fingerGateState === "finger-lost" &&
               pulseEstimate.usedLastCleanWindow
-                ? "Finger moved - estimate based on last clean window. Non-medical estimate."
+                ? "Estimate based on last clean window. Non-medical estimate."
                 : `Non-medical estimate / Confidence: ${
                     pulseConfidenceLabels[pulseEstimate.confidence]
                   }`

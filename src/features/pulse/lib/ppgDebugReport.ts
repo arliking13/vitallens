@@ -17,7 +17,9 @@ export type PpgDebugQuality = {
   signalRange: number;
   variance: number;
   droppedFrameEstimate: number;
-  fingerDetected: boolean;
+  currentFingerDetected: boolean;
+  cleanWindowFingerDetected: boolean;
+  usedLastCleanWindow: boolean;
   notes: string[];
 };
 
@@ -37,6 +39,9 @@ export type PpgDebugReport = {
   currentWindowValidSampleCount: number;
   totalIgnoredFrameCount: number;
   totalFingerLostCount: number;
+  currentFingerDetected: boolean;
+  cleanWindowFingerDetected: boolean;
+  usedLastCleanWindow: boolean;
   recordingStartedAt: number | null;
   lastFingerLostAt: number | null;
   pulseEstimate: PulseEstimate;
@@ -47,7 +52,8 @@ export type PpgDebugReport = {
 type BuildPpgDebugReportOptions = {
   cameraStatusAtExport: CameraStatus;
   cameraStatusAtStart: CameraStatus;
-  fingerDetected: boolean;
+  currentFingerDetected: boolean;
+  cleanWindowFingerDetected: boolean;
   fingerGateState: FingerGateState;
   totalFingerLostCount: number;
   totalIgnoredFrameCount: number;
@@ -60,6 +66,7 @@ type BuildPpgDebugReportOptions = {
   startedAt: string;
   torchStateAtExport: TorchState;
   torchStateAtStart: TorchState;
+  usedLastCleanWindow: boolean;
 };
 
 function average(values: number[]) {
@@ -167,7 +174,8 @@ function buildFileTimestamp(startedAt: string) {
 export function buildPpgDebugReport({
   cameraStatusAtExport,
   cameraStatusAtStart,
-  fingerDetected,
+  cleanWindowFingerDetected,
+  currentFingerDetected,
   fingerGateState,
   lastFingerLostAt,
   notes = [],
@@ -180,6 +188,7 @@ export function buildPpgDebugReport({
   torchStateAtStart,
   totalFingerLostCount,
   totalIgnoredFrameCount,
+  usedLastCleanWindow,
 }: BuildPpgDebugReportOptions): PpgDebugReport {
   const greenValues = samples.map((sample) => sample.green);
   const brightnessValues = samples.map((sample) => sample.brightness);
@@ -207,6 +216,9 @@ export function buildPpgDebugReport({
     currentWindowValidSampleCount: samples.length,
     totalIgnoredFrameCount,
     totalFingerLostCount,
+    currentFingerDetected,
+    cleanWindowFingerDetected,
+    usedLastCleanWindow,
     recordingStartedAt:
       currentRecordingStartedAt === null
         ? null
@@ -239,7 +251,9 @@ export function buildPpgDebugReport({
       signalRange: formatNumber(signalStats.range),
       variance: formatNumber(variance(normalizedValues)),
       droppedFrameEstimate: estimateDroppedFrames(samples),
-      fingerDetected,
+      currentFingerDetected,
+      cleanWindowFingerDetected,
+      usedLastCleanWindow,
       notes,
     },
   };
