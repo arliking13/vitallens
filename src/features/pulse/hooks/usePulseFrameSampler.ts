@@ -57,6 +57,10 @@ function getSampleDurationMs(samples: PpgSample[]) {
   return Math.max(0, samples[samples.length - 1].t - samples[0].t);
 }
 
+function getSampleWindowStartedAt(samples: PpgSample[]) {
+  return samples[0]?.t ?? null;
+}
+
 function trimRecentSamples(samples: PpgSample[], trimAfterMs: number) {
   return samples.filter((sample) => sample.t < trimAfterMs);
 }
@@ -184,6 +188,7 @@ export function usePulseFrameSampler({
 
   const updateRecordedSamples = useCallback((nextSamples: PpgSample[]) => {
     samplesRef.current = nextSamples;
+    const nextRecordingStartedAt = getSampleWindowStartedAt(nextSamples);
     const nextLiveSignal = buildLiveSignal(nextSamples);
     const nextSmoothedSignal = movingAverage(
       nextLiveSignal,
@@ -204,6 +209,8 @@ export function usePulseFrameSampler({
     setFingerDetected(nextQuality.fingerDetected);
     setQualityMessage(nextQuality.qualityMessage);
     setPulseEstimate(nextPulseEstimate);
+    setRecordingStartedAt(nextRecordingStartedAt);
+    recordingStartedAtRef.current = nextRecordingStartedAt;
     setDurationMs(getSampleDurationMs(nextSamples));
   }, []);
 
@@ -349,9 +356,11 @@ export function usePulseFrameSampler({
     startedAt,
     durationMs,
     fingerGateState,
-    validSampleCount: samples.length,
-    ignoredFrameCount,
-    fingerLostCount,
+    cleanWindowStartedAt: recordingStartedAt,
+    cleanWindowDurationMs: durationMs,
+    currentWindowValidSampleCount: samples.length,
+    totalIgnoredFrameCount: ignoredFrameCount,
+    totalFingerLostCount: fingerLostCount,
     recordingStartedAt,
     lastFingerLostAt,
     status,

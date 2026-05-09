@@ -116,11 +116,10 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
   const { error, startCamera, status, stopCamera, stream, torchState } =
     useRearCamera();
   const {
-    durationMs,
+    cleanWindowDurationMs,
+    currentWindowValidSampleCount,
     fingerGateState,
     fingerDetected,
-    fingerLostCount,
-    ignoredFrameCount,
     error: samplingError,
     lastFingerLostAt,
     pulseEstimate,
@@ -135,7 +134,8 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
     startedAt,
     status: samplingStatus,
     stopSampling,
-    validSampleCount,
+    totalFingerLostCount,
+    totalIgnoredFrameCount,
   } = usePulseFrameSampler({ stream, videoRef });
   const isCameraReady = status === "ready";
   const isRequestingCamera = status === "requesting";
@@ -143,7 +143,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
   const showTorchStatus = torchState !== "unsupported";
   const canExportSignalData =
     samples.length > 0 &&
-    durationMs >= MIN_EXPORT_DURATION_MS &&
+    cleanWindowDurationMs >= MIN_EXPORT_DURATION_MS &&
     startedAt !== null;
   const hasPulseEstimate = pulseEstimate.bpm !== null;
 
@@ -184,8 +184,6 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
       cameraStatusAtStart: cameraStatusAtStart ?? status,
       fingerDetected,
       fingerGateState,
-      fingerLostCount,
-      ignoredFrameCount,
       lastFingerLostAt,
       notes: [
         qualityMessage,
@@ -199,6 +197,8 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
       startedAt,
       torchStateAtExport: torchState,
       torchStateAtStart: torchStateAtStart ?? torchState,
+      totalFingerLostCount,
+      totalIgnoredFrameCount,
     });
 
     downloadPpgDebugReport(report);
@@ -288,10 +288,10 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         />
         <InfoRow
           delayMs={240}
-          detail={`${ignoredFrameCount} ignored frames / ${fingerLostCount} finger-lost events`}
+          detail={`${totalIgnoredFrameCount} total ignored frames / ${totalFingerLostCount} total finger-lost events`}
           label="Valid samples"
           tone="neutral"
-          value={String(validSampleCount)}
+          value={String(currentWindowValidSampleCount)}
         />
         {hasPulseEstimate ? (
           <InfoRow

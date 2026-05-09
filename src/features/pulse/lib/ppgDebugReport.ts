@@ -32,9 +32,11 @@ export type PpgDebugReport = {
   torchStateAtStart: TorchState;
   torchStateAtExport: TorchState;
   fingerGateState: FingerGateState;
-  validSampleCount: number;
-  ignoredFrameCount: number;
-  fingerLostCount: number;
+  cleanWindowStartedAt: number | null;
+  cleanWindowDurationMs: number;
+  currentWindowValidSampleCount: number;
+  totalIgnoredFrameCount: number;
+  totalFingerLostCount: number;
   recordingStartedAt: number | null;
   lastFingerLostAt: number | null;
   pulseEstimate: PulseEstimate;
@@ -47,8 +49,8 @@ type BuildPpgDebugReportOptions = {
   cameraStatusAtStart: CameraStatus;
   fingerDetected: boolean;
   fingerGateState: FingerGateState;
-  fingerLostCount: number;
-  ignoredFrameCount: number;
+  totalFingerLostCount: number;
+  totalIgnoredFrameCount: number;
   lastFingerLostAt: number | null;
   notes?: string[];
   pulseEstimate: PulseEstimate;
@@ -118,6 +120,10 @@ function getDurationMs(samples: PpgSample[]) {
   return Math.max(0, samples[samples.length - 1].t - samples[0].t);
 }
 
+function getCleanWindowStartedAt(samples: PpgSample[]) {
+  return samples[0]?.t ?? null;
+}
+
 function getEstimatedFps(samples: PpgSample[], durationMs: number) {
   if (samples.length < 2 || durationMs <= 0) {
     return 0;
@@ -163,8 +169,6 @@ export function buildPpgDebugReport({
   cameraStatusAtStart,
   fingerDetected,
   fingerGateState,
-  fingerLostCount,
-  ignoredFrameCount,
   lastFingerLostAt,
   notes = [],
   pulseEstimate,
@@ -174,30 +178,39 @@ export function buildPpgDebugReport({
   startedAt,
   torchStateAtExport,
   torchStateAtStart,
+  totalFingerLostCount,
+  totalIgnoredFrameCount,
 }: BuildPpgDebugReportOptions): PpgDebugReport {
   const greenValues = samples.map((sample) => sample.green);
   const brightnessValues = samples.map((sample) => sample.brightness);
   const normalizedValues = normalizeValues(greenValues);
   const brightnessStats = range(brightnessValues);
   const signalStats = range(normalizedValues);
-  const durationMs = getDurationMs(samples);
+  const cleanWindowDurationMs = getDurationMs(samples);
+  const cleanWindowStartedAt = getCleanWindowStartedAt(samples);
+  const currentRecordingStartedAt = cleanWindowStartedAt ?? recordingStartedAt;
 
   return {
     sessionId,
     startedAt,
-    durationMs: formatNumber(durationMs),
+    durationMs: formatNumber(cleanWindowDurationMs),
     sampleCount: samples.length,
-    estimatedFps: formatNumber(getEstimatedFps(samples, durationMs)),
+    estimatedFps: formatNumber(getEstimatedFps(samples, cleanWindowDurationMs)),
     cameraStatusAtStart,
     cameraStatusAtExport,
     torchStateAtStart,
     torchStateAtExport,
     fingerGateState,
-    validSampleCount: samples.length,
-    ignoredFrameCount,
-    fingerLostCount,
+    cleanWindowStartedAt:
+      cleanWindowStartedAt === null ? null : formatNumber(cleanWindowStartedAt),
+    cleanWindowDurationMs: formatNumber(cleanWindowDurationMs),
+    currentWindowValidSampleCount: samples.length,
+    totalIgnoredFrameCount,
+    totalFingerLostCount,
     recordingStartedAt:
-      recordingStartedAt === null ? null : formatNumber(recordingStartedAt),
+      currentRecordingStartedAt === null
+        ? null
+        : formatNumber(currentRecordingStartedAt),
     lastFingerLostAt:
       lastFingerLostAt === null ? null : formatNumber(lastFingerLostAt),
     pulseEstimate: {
