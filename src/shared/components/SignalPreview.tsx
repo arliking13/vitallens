@@ -4,6 +4,7 @@ type SignalPreviewProps = {
   caption: string;
   delayMs?: number;
   label: string;
+  liveSignal?: number[];
   status: string;
   tone: "pulse" | "breath";
 };
@@ -27,14 +28,47 @@ const previewStyles = {
   },
 };
 
+function clampSignalValue(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
+function buildFlatPath() {
+  return "M4 72 C48 72 68 72 92 72 C116 72 140 72 164 72 C188 72 212 72 236 72";
+}
+
+function buildSignalPath(values: number[]) {
+  if (values.length < 2) {
+    return buildFlatPath();
+  }
+
+  const width = 232;
+  const startX = 4;
+  const baseY = 92;
+  const amplitude = 56;
+  const stepX = width / (values.length - 1);
+  const points = values.map((value, index) => ({
+    x: startX + stepX * index,
+    y: baseY - clampSignalValue(value) * amplitude,
+  }));
+
+  return points.slice(1).reduce((path, point, index) => {
+    const previousPoint = points[index];
+    const controlX = (previousPoint.x + point.x) / 2;
+    return `${path} C ${controlX} ${previousPoint.y} ${controlX} ${point.y} ${point.x} ${point.y}`;
+  }, `M${points[0].x} ${points[0].y}`);
+}
+
 export function SignalPreview({
   caption,
   delayMs = 40,
   label,
+  liveSignal,
   status,
   tone,
 }: SignalPreviewProps) {
   const style = previewStyles[tone];
+  const path =
+    liveSignal === undefined ? style.path : buildSignalPath(liveSignal);
   const animationStyle: AnimationStyle = {
     "--card-delay": `${delayMs}ms`,
   };
@@ -74,7 +108,7 @@ export function SignalPreview({
           viewBox="0 0 240 128"
         >
           <path
-            d={style.path}
+            d={path}
             fill="none"
             opacity="0.18"
             stroke={style.accent}
@@ -83,7 +117,7 @@ export function SignalPreview({
             strokeWidth="18"
           />
           <path
-            d={style.path}
+            d={path}
             fill="none"
             stroke={style.accent}
             strokeLinecap="round"

@@ -1,7 +1,7 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { useEffect, useRef } from "react";
+import type { CSSProperties, RefObject } from "react";
+import { useEffect } from "react";
 
 import type { CameraStatus } from "@/features/pulse/hooks/useRearCamera";
 
@@ -9,6 +9,7 @@ type CameraPreviewProps = {
   delayMs?: number;
   status: CameraStatus;
   stream: MediaStream | null;
+  videoRef: RefObject<HTMLVideoElement | null>;
 };
 
 type AnimationStyle = CSSProperties & {
@@ -27,8 +28,8 @@ export function CameraPreview({
   delayMs = 40,
   status,
   stream,
+  videoRef,
 }: CameraPreviewProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
   const hasStream = stream !== null;
   const animationStyle: AnimationStyle = {
     "--card-delay": `${delayMs}ms`,
@@ -45,7 +46,7 @@ export function CameraPreview({
     return () => {
       video.srcObject = null;
     };
-  }, [stream]);
+  }, [stream, videoRef]);
 
   return (
     <div
@@ -56,7 +57,7 @@ export function CameraPreview({
         <div>
           <p className="text-sm font-semibold text-[#1C2520]">Camera preview</p>
           <p className="mt-1 text-sm leading-5 text-[#66706A]">
-            Soft pulse signal preview
+            Rear camera stream
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-[#F5F7F4] px-3 py-1.5 text-xs font-semibold text-[#66706A]">
@@ -94,4 +95,3 @@ export function CameraPreview({
     </div>
   );
 }
-
