@@ -58,6 +58,7 @@ const PLACEMENT_CHECK_INTERVAL_MS = 250;
 const PLACEMENT_START_ANYWAY_SECONDS = 12;
 const CONTACT_CANVAS_SIZE = 24;
 const CONTACT_SAMPLE_INTERVAL_MS = 350;
+const ENABLE_BREATH_CAMERA_CONTACT_CHECK = false;
 
 const fallbackMessage =
   "Motion access unavailable. You can continue with pulse-only report.";
@@ -478,7 +479,7 @@ async function requestDeviceMotionAccess() {
 
 function getHeaderDescription(phase: BreathPhase) {
   if (phase === "placement") {
-    return "Place your iPhone screen-up on your chest or upper abdomen.";
+    return "Place your phone flat against your chest or upper abdomen.";
   }
 
   if (phase === "starting") {
@@ -497,12 +498,12 @@ function getHeaderDescription(phase: BreathPhase) {
     return fallbackMessage;
   }
 
-  return "Place your iPhone screen-up on your chest or upper abdomen. The rear camera helps confirm phone contact before recording.";
+  return "Place your phone flat against your chest or upper abdomen. Audio will guide you through the check.";
 }
 
 function getPreviewStatus(phase: BreathPhase) {
   if (phase === "placement") {
-    return "Checking contact";
+    return "Position check";
   }
 
   if (phase === "starting") {
@@ -537,24 +538,18 @@ function getPrimaryButtonLabel(phase: BreathPhase) {
 }
 
 function getCardInstruction({
-  contactCheckState,
   phase,
   showStartAnyway,
 }: {
-  contactCheckState: ContactCheckState;
   phase: BreathPhase;
   showStartAnyway: boolean;
 }) {
   if (phase === "placement") {
-    if (contactCheckState === "unavailable") {
-      return "Camera contact check unavailable. You can start with motion-only guidance.";
-    }
-
     if (showStartAnyway) {
       return "You can continue with motion-only guidance.";
     }
 
-    return "Keep the phone screen-up and still.";
+    return "Waiting for the phone to become stable.";
   }
 
   if (phase === "starting") {
@@ -562,7 +557,7 @@ function getCardInstruction({
   }
 
   if (phase === "recording") {
-    return "Keep the phone still and breathe normally.";
+    return "Breathe normally while the phone stays still.";
   }
 
   if (phase === "complete") {
@@ -573,7 +568,7 @@ function getCardInstruction({
     return "Motion access unavailable.";
   }
 
-  return "Place your phone screen-up, then tap start.";
+  return "Place your phone flat against your chest or upper abdomen, then tap start.";
 }
 
 function getPreferredSpeechVoice() {
@@ -810,6 +805,12 @@ export function BreathCheckScreen({
     setContactCheckState("checking");
     setStatusMessage(null);
 
+      if (!ENABLE_BREATH_CAMERA_CONTACT_CHECK) {
+    contactReadyRef.current = true;
+    setContactCheckState("ready");
+    return;
+  }
+
     if (
       typeof navigator === "undefined" ||
       !navigator.mediaDevices?.getUserMedia
@@ -899,7 +900,7 @@ export function BreathCheckScreen({
     setStatusMessage(null);
     speakSequence(
       announcePlacement
-        ? ["Phone contact ready.", "Starting in three, two, one.", "Breathe normally."]
+        ? ["Phone is stable.", "Starting in three, two, one.", "Breathe normally."]
         : ["Starting in three, two, one.", "Breathe normally."],
     );
 
@@ -1069,9 +1070,9 @@ export function BreathCheckScreen({
     setStatusMessage(null);
     prepareAudio();
     speakSequence([
-      "Place your phone on your chest or upper abdomen.",
-      "Keep it still.",
-    ]);
+  "Place your phone against your chest or upper abdomen.",
+  "Keep it still.",
+]);
 
     const motionAccess = await requestDeviceMotionAccess();
 
@@ -1181,7 +1182,7 @@ export function BreathCheckScreen({
           : `${roundedElapsedSeconds}s / ${RECORDING_DURATION_SECONDS}s`;
   const progressLabel =
     phase === "placement"
-      ? "Contact check"
+      ? "Position check"
       : phase === "starting"
         ? "Countdown"
         : "Progress";
@@ -1205,10 +1206,9 @@ export function BreathCheckScreen({
     (placementElapsedSeconds >= PLACEMENT_START_ANYWAY_SECONDS ||
       contactCheckState === "unavailable");
   const cardInstruction = getCardInstruction({
-    contactCheckState,
-    phase,
-    showStartAnyway,
-  });
+  phase,
+  showStartAnyway,
+});
 
   return (
     <div className="flex min-h-[calc(100dvh-7rem)] flex-col pb-32">
@@ -1341,8 +1341,8 @@ export function BreathCheckScreen({
             </span>
           </div>
           <p className="mt-3 text-sm leading-6 text-[var(--vl-text-muted)]">
-            Measured from small phone movements while resting on your chest or
-            abdomen.
+            Measured from small phone movements while resting against your chest or
+abdomen.
           </p>
         </section>
       ) : null}

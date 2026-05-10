@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 
 import { Button } from "@/shared/components/Button";
 import {
-  BreathWavesIcon,
   CameraIcon,
   ScanPlayIcon,
 } from "@/shared/components/LineIcons";
@@ -20,24 +19,17 @@ const SWIPE_THRESHOLD_PX = 48;
 const guideSlides = [
   {
     FallbackIcon: CameraIcon,
-    imageAlt: "A person holding a phone before starting the breath motion check.",
+    imageAlt: "A person getting ready before starting the breath motion check.",
     imageSrc: "/breath-guide-step-1.png",
     stepLabel: "Step 1",
     title: "Get ready",
   },
   {
     FallbackIcon: ScanPlayIcon,
-    imageAlt: "A phone placed screen-up on the chest for the breath motion check.",
+    imageAlt: "A phone placed flat against the chest or upper abdomen for the breath motion check.",
     imageSrc: "/breath-guide-step-2.png",
     stepLabel: "Step 2",
     title: "Place your phone",
-  },
-  {
-    FallbackIcon: BreathWavesIcon,
-    imageAlt: "A breath motion check instruction to breathe normally while the phone rests still.",
-    imageSrc: "/breath-guide-step-3.png",
-    stepLabel: "Step 3",
-    title: "Breathe normally",
   },
 ];
 
