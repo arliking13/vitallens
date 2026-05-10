@@ -168,13 +168,6 @@ export function PulseScanGuide({ onClose }: PulseScanGuideProps) {
           >
             How to scan
           </h2>
-          <button
-            className="vl-glass-pill interactive-press min-h-9 px-3 text-xs font-bold text-[var(--vl-text-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vl-peach)]"
-            onClick={onClose}
-            type="button"
-          >
-            Close
-          </button>
         </div>
 
         <div className="mt-3 grid max-h-[min(70dvh,520px)] w-full overflow-hidden rounded-[30px]">
