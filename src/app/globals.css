@@ -215,9 +215,11 @@ button {
 .vl-scanner-heart {
   align-items: center;
   animation: vl-scanner-heartbeat 0.85s ease-in-out infinite;
+  background: rgba(244, 124, 98, 0.2);
   display: inline-flex;
   height: 56px;
   justify-content: center;
+  outline: 2px solid red;
   transform-origin: center center;
   width: 56px;
   will-change: transform, filter;
