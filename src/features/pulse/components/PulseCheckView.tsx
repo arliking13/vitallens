@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/shared/components/Button";
@@ -8,7 +9,6 @@ import { HeartIcon } from "@/shared/components/LineIcons";
 import type { PulseCheckResult } from "@/shared/types/check-flow";
 
 import { CameraPreview } from "./CameraPreview";
-import { PulseScanGuide } from "./PulseScanGuide";
 import {
   buildPpgDebugReport,
   downloadPpgDebugReport,
@@ -27,6 +27,11 @@ type PreviewPreference = {
   enabled: boolean;
   stream: MediaStream | null;
 };
+
+const PulseScanGuide = dynamic(
+  () => import("./PulseScanGuide").then((mod) => mod.PulseScanGuide),
+  { ssr: false },
+);
 
 const cameraStatusLabels = {
   idle: "Idle",
@@ -313,17 +318,7 @@ export function PulseCheckView({
         </p>
       </div>
 
-      <div className="mt-5">
-        <div className="mb-3 flex justify-end">
-          <button
-            className="vl-scan-guide-pill interactive-press"
-            onClick={() => setIsScanGuideOpen(true)}
-            type="button"
-          >
-            Scan guide
-          </button>
-        </div>
-
+      <div className="relative mt-5">
         <CameraPreview
           delayMs={40}
           fingerGateState={fingerGateState}
@@ -338,6 +333,15 @@ export function PulseCheckView({
           stream={stream}
           videoRef={videoRef}
         />
+        <div className="pointer-events-none absolute right-5 top-3 z-30">
+          <button
+            className="vl-scan-guide-pill interactive-press pointer-events-auto"
+            onClick={() => setIsScanGuideOpen(true)}
+            type="button"
+          >
+            Scan guide
+          </button>
+        </div>
       </div>
 
       {hasPulseEstimate ? (
