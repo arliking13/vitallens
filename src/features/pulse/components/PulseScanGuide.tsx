@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type TouchEvent } from "react";
-import Image from "next/image";
+import { createPortal } from "react-dom";
 
 import { Button } from "@/shared/components/Button";
 import {
@@ -14,7 +14,7 @@ type PulseScanGuideProps = {
   onClose: () => void;
 };
 
-const AUTO_ADVANCE_MS = 2400;
+const AUTO_ADVANCE_MS = 4200;
 const SWIPE_THRESHOLD_PX = 48;
 
 const guideSlides = [
@@ -48,7 +48,6 @@ export function PulseScanGuide({ onClose }: PulseScanGuideProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [failedImageIndexes, setFailedImageIndexes] = useState<number[]>([]);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const isLastSlide = activeIndex === guideSlides.length - 1;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -65,28 +64,40 @@ export function PulseScanGuide({ onClose }: PulseScanGuideProps) {
   }, [onClose]);
 
   useEffect(() => {
-    if (isLastSlide) {
-      return;
-    }
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
 
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
     const advanceTimerId = window.setTimeout(() => {
       setActiveIndex((currentIndex) =>
-        Math.min(currentIndex + 1, guideSlides.length - 1),
+        (currentIndex + 1) % guideSlides.length,
       );
     }, AUTO_ADVANCE_MS);
 
     return () => {
       window.clearTimeout(advanceTimerId);
     };
-  }, [isLastSlide, activeIndex]);
+  }, [activeIndex]);
 
   function goToPreviousSlide() {
-    setActiveIndex((currentIndex) => Math.max(currentIndex - 1, 0));
+    setActiveIndex(
+      (currentIndex) =>
+        (currentIndex - 1 + guideSlides.length) % guideSlides.length,
+    );
   }
 
   function goToNextSlide() {
     setActiveIndex((currentIndex) =>
-      Math.min(currentIndex + 1, guideSlides.length - 1),
+      (currentIndex + 1) % guideSlides.length,
     );
   }
 
@@ -121,12 +132,18 @@ export function PulseScanGuide({ onClose }: PulseScanGuideProps) {
     setTouchStartX(null);
   }
 
-  return (
+  const guideDialog = (
     <div
       aria-labelledby="pulse-scan-guide-title"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(7,27,58,0.28)] px-4 py-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex h-[100dvh] w-screen items-center justify-center overflow-hidden overscroll-contain bg-[rgba(7,27,58,0.28)] px-4 backdrop-blur-md"
       role="dialog"
+      style={{
+        WebkitBackdropFilter: "blur(18px) saturate(1.12)",
+        backdropFilter: "blur(18px) saturate(1.12)",
+        paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+        paddingTop: "max(1rem, env(safe-area-inset-top))",
+      }}
     >
       <button
         aria-label="Close scan guide"
@@ -136,13 +153,17 @@ export function PulseScanGuide({ onClose }: PulseScanGuideProps) {
       />
 
       <section
-        className="vl-glass-card animate-card-in relative z-10 w-full max-w-[390px] overflow-hidden rounded-[34px] p-3 shadow-[0_22px_70px_rgba(7,27,58,0.20)]"
+        className="animate-card-in relative z-10 flex w-[min(92vw,390px)] max-h-[min(82dvh,680px)] -translate-y-[2dvh] flex-col overflow-hidden rounded-[34px] border border-white/70 bg-white/60 p-3 shadow-[0_24px_80px_rgba(7,27,58,0.22),0_10px_28px_rgba(244,124,98,0.10),inset_0_1px_0_rgba(255,255,255,0.92)] backdrop-blur-2xl"
         onTouchEnd={handleTouchEnd}
         onTouchStart={handleTouchStart}
+        style={{
+          WebkitBackdropFilter: "blur(22px) saturate(1.45)",
+          backdropFilter: "blur(22px) saturate(1.45)",
+        }}
       >
         <div className="flex items-center justify-between gap-3">
           <h2
-            className="px-1 text-lg font-bold tracking-normal text-[var(--vl-text)]"
+            className="px-1 text-base font-bold tracking-normal text-[var(--vl-text)]"
             id="pulse-scan-guide-title"
           >
             How to scan
@@ -156,59 +177,55 @@ export function PulseScanGuide({ onClose }: PulseScanGuideProps) {
           </button>
         </div>
 
-        <div className="mt-3 overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.86),rgba(255,246,241,0.64))] shadow-[0_18px_44px_rgba(7,27,58,0.12)]">
-          <div className="relative aspect-square w-full overflow-hidden bg-white/60">
-            {guideSlides.map((slide, index) => {
-              const FallbackIcon = slide.FallbackIcon;
-              const isActive = index === activeIndex;
-              const imageFailed = failedImageIndexes.includes(index);
+        <div className="mt-3 grid max-h-[min(70dvh,520px)] w-full overflow-hidden rounded-[30px]">
+          {guideSlides.map((slide, index) => {
+            const FallbackIcon = slide.FallbackIcon;
+            const isActive = index === activeIndex;
+            const imageFailed = failedImageIndexes.includes(index);
 
-              return (
-                <div
-                  aria-hidden={!isActive}
-                  className={[
-                    "absolute inset-0 transition duration-500 ease-out",
-                    isActive
-                      ? "translate-x-0 opacity-100"
-                      : index < activeIndex
-                        ? "-translate-x-3 opacity-0"
-                        : "translate-x-3 opacity-0",
-                  ].join(" ")}
-                  key={slide.stepLabel}
-                >
-                  {imageFailed ? (
-                    <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
-                      <span
-                        aria-hidden="true"
-                        className="vl-glass-icon h-20 w-20 text-[var(--vl-peach-strong)]"
-                      >
-                        <FallbackIcon className="h-10 w-10" />
+            return (
+              <div
+                aria-hidden={!isActive}
+                className={[
+                  "col-start-1 row-start-1 flex min-h-0 items-center justify-center transition duration-700 ease-out",
+                  isActive
+                    ? "translate-x-0 opacity-100"
+                    : index < activeIndex
+                      ? "-translate-x-2 opacity-0"
+                      : "translate-x-2 opacity-0",
+                ].join(" ")}
+                key={slide.stepLabel}
+              >
+                {imageFailed ? (
+                  <div className="flex aspect-[0.82] max-h-[min(70dvh,520px)] w-full flex-col items-center justify-center gap-4 rounded-[30px] bg-white/65 px-8 text-center shadow-[0_14px_42px_rgba(7,27,58,0.12)]">
+                    <span
+                      aria-hidden="true"
+                      className="vl-glass-icon h-20 w-20 text-[var(--vl-peach-strong)]"
+                    >
+                      <FallbackIcon className="h-10 w-10" />
+                    </span>
+                    <div>
+                      <span className="vl-peach-pill inline-flex px-3 py-1 text-xs font-bold">
+                        {slide.stepLabel}
                       </span>
-                      <div>
-                        <span className="vl-peach-pill inline-flex px-3 py-1 text-xs font-bold">
-                          {slide.stepLabel}
-                        </span>
-                        <p className="mt-3 text-lg font-bold text-[var(--vl-text)]">
-                          {slide.title}
-                        </p>
-                      </div>
+                      <p className="mt-3 text-lg font-bold text-[var(--vl-text)]">
+                        {slide.title}
+                      </p>
                     </div>
-                  ) : (
-                    <Image
-                      alt={isActive ? slide.imageAlt : ""}
-                      className="h-full w-full object-contain"
-                      draggable={false}
-                      fill
-                      onError={() => handleImageError(index)}
-                      priority={index === 0}
-                      sizes="(min-width: 640px) 390px, calc(100vw - 2rem)"
-                      src={slide.imageSrc}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    alt={isActive ? slide.imageAlt : ""}
+                    className="block h-auto max-h-[min(70dvh,520px)] w-full rounded-[30px] object-contain shadow-[0_16px_46px_rgba(7,27,58,0.14)]"
+                    draggable={false}
+                    onError={() => handleImageError(index)}
+                    src={slide.imageSrc}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <div className="mt-3 flex items-center justify-center gap-3">
@@ -238,4 +255,10 @@ export function PulseScanGuide({ onClose }: PulseScanGuideProps) {
       </section>
     </div>
   );
+
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(guideDialog, document.body);
 }
