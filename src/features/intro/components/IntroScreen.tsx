@@ -36,24 +36,17 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
       />
 
       <Card className="mt-8" delayMs={40} padding="lg">
-        <p className="text-sm font-semibold text-[#1C2520]">What this includes</p>
+        <p className="text-sm font-bold text-[var(--vl-text)]">What this includes</p>
         <div className="mt-5 space-y-5">
           {includedItems.map((item) => (
             <div className="flex gap-3" key={item.title}>
               <span
-                className={[
-                  "mt-1 h-3 w-3 shrink-0 rounded-full",
-                  item.tone === "pulse" ? "bg-[#E97E7E]" : "",
-                  item.tone === "breath" ? "bg-[#69B9B0]" : "",
-                  item.tone === "brand" ? "bg-[#157A6E]" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                className="vl-peach-pill mt-0.5 h-9 w-9 shrink-0"
                 aria-hidden="true"
               />
               <div>
-                <p className="text-base font-semibold text-[#1C2520]">{item.title}</p>
-                <p className="mt-1 text-sm leading-6 text-[#66706A]">{item.detail}</p>
+                <p className="text-base font-bold text-[var(--vl-text)]">{item.title}</p>
+                <p className="mt-1 text-sm leading-6 text-[var(--vl-text-muted)]">{item.detail}</p>
               </div>
             </div>
           ))}

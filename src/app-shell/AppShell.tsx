@@ -52,20 +52,20 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F5F7F4] text-[#1C2520]">
+    <div className="min-h-dvh bg-[var(--vl-bg)] text-[var(--vl-text)]">
       <main className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-xl">
         <header className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-lg font-bold tracking-normal text-[#1C2520]">VitalLens</p>
-            <p className="mt-0.5 text-sm font-medium text-[#66706A]">
+            <p className="text-xl font-bold tracking-normal text-[var(--vl-text)]">VitalLens</p>
+            <p className="mt-0.5 text-sm font-medium text-[var(--vl-text-muted)]">
               Guided wellness check-in
             </p>
           </div>
           <div
             aria-label={`Progress ${activeIndex + 1} of ${stepOrder.length}`}
-            className="flex items-center gap-2 rounded-full border border-[#E5EAE4] bg-white/80 px-3 py-2 shadow-[0_8px_22px_rgba(28,37,32,0.045)]"
+            className="vl-glass-pill flex items-center gap-2 px-3 py-2"
           >
-            <span className="text-xs font-bold text-[#157A6E]">{progressLabel}</span>
+            <span className="text-xs font-bold text-[var(--vl-text)]">{progressLabel}</span>
             <span className="flex items-center gap-1" aria-hidden="true">
               {stepOrder.map((stepId, index) => (
                 <span

@@ -16,7 +16,7 @@ export function StepNavigation({
   return (
     <nav
       aria-label="VitalLens flow"
-      className="mt-5 overflow-hidden rounded-full border border-[#E5EAE4] bg-white/70 p-1 shadow-[0_10px_28px_rgba(28,37,32,0.045)]"
+      className="vl-segmented-control mt-5 overflow-hidden p-1"
     >
       <ol className="grid grid-cols-4 gap-1">
         {steps.map((step) => {
@@ -28,11 +28,11 @@ export function StepNavigation({
               <button
                 aria-current={isActive ? "step" : undefined}
                 className={[
-                  "step-pill grid h-9 w-full place-items-center rounded-full px-2 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#157A6E]",
+                  "step-pill grid h-9 w-full place-items-center rounded-full border border-transparent px-2 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vl-peach)]",
                   isActive
-                    ? "bg-[#157A6E] text-white shadow-[0_8px_18px_rgba(21,122,110,0.16)]"
-                    : "text-[#66706A] hover:bg-white",
-                  isComplete && !isActive ? "text-[#157A6E]" : "",
+                    ? "vl-segment-active"
+                    : "text-[var(--vl-text-muted)] hover:bg-white/40",
+                  isComplete && !isActive ? "text-[var(--vl-success)]" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}

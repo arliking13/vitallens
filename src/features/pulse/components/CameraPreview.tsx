@@ -97,6 +97,26 @@ const gateScannerCopy: Record<
   },
 };
 
+const instructionItems = [
+  {
+    id: "place",
+    title: "Place finger",
+    detail: "Cover the rear camera gently.",
+  },
+  {
+    id: "hold",
+    title: "Hold steady",
+    detail: "Keep your finger still and relaxed.",
+  },
+  {
+    id: "scan",
+    title: "Start scan",
+    detail: "Tap start. The flash will turn on.",
+  },
+] as const;
+
+type InstructionId = (typeof instructionItems)[number]["id"];
+
 function getScannerCopy({
   fingerGateState,
   isSampling,
@@ -111,6 +131,33 @@ function getScannerCopy({
   }
 
   return scannerCopy[status];
+}
+
+function getActiveInstruction({
+  fingerGateState,
+  isSampling,
+  status,
+}: {
+  fingerGateState?: FingerGateState;
+  isSampling: boolean;
+  status: CameraStatus;
+}): InstructionId {
+  if (!isSampling) {
+    return status === "ready" ? "place" : "scan";
+  }
+
+  if (
+    fingerGateState === "waiting-for-finger" ||
+    fingerGateState === "finger-lost"
+  ) {
+    return "place";
+  }
+
+  if (fingerGateState === "stabilizing") {
+    return "hold";
+  }
+
+  return "scan";
 }
 
 function clampSignalValue(value: number) {
@@ -163,6 +210,11 @@ export function CameraPreview({
     isSampling,
     status,
   });
+  const activeInstruction = getActiveInstruction({
+    fingerGateState,
+    isSampling,
+    status,
+  });
   const title = scannerTitle ?? copy.title;
   const detail = scannerDetail ?? copy.detail;
   const label = scannerLabel ?? (hasStream ? copy.label : emptyStateCopy[status]);
@@ -186,22 +238,22 @@ export function CameraPreview({
 
   return (
     <div
-      className="animate-card-in overflow-hidden rounded-[24px] border border-[#E5EAE4] bg-white p-3 shadow-[0_18px_48px_rgba(28,37,32,0.055)]"
+      className="vl-scanner-card animate-card-in overflow-hidden p-3"
       style={animationStyle}
     >
       <div className="flex items-center justify-between gap-3 px-2 pb-3">
         <div>
-          <p className="text-sm font-semibold text-[#1C2520]">Camera check</p>
-          <p className="mt-1 text-sm leading-5 text-[#66706A]">
+          <p className="text-sm font-semibold text-[var(--vl-text)]">Camera check</p>
+          <p className="mt-1 text-sm leading-5 text-[var(--vl-text-muted)]">
             Sensor view
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-[#F5F7F4] px-3 py-1.5 text-xs font-semibold text-[#66706A]">
+        <span className="vl-glass-pill shrink-0 px-3 py-1.5 text-xs font-semibold text-[var(--vl-text-muted)]">
           {label}
         </span>
       </div>
 
-      <div className="relative overflow-hidden rounded-[22px] bg-[#111815] px-5 pb-4 pt-6">
+      <div className="relative overflow-hidden rounded-[24px] border border-white/60 bg-white/40 px-4 pb-4 pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
         <video
           aria-hidden={!shouldShowRawPreview}
           aria-label={
@@ -228,31 +280,58 @@ export function CameraPreview({
           ].join(" ")}
         >
           <div
-            className="scanner-glow absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#E97E7E]/20 blur-2xl"
+            className="scanner-glow absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(244,124,98,0.18)] blur-2xl"
             aria-hidden="true"
           />
           <div
-            className="absolute inset-x-8 top-8 h-px bg-gradient-to-r from-transparent via-white/16 to-transparent"
+            className="absolute inset-x-8 top-8 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent"
             aria-hidden="true"
           />
           <div className="relative">
+            <div className="mb-4 grid grid-cols-3 gap-2">
+              {instructionItems.map((item) => {
+                const isActive = item.id === activeInstruction;
+
+                return (
+                  <div
+                    className={[
+                      "vl-instruction-card px-2.5 py-3 text-left",
+                      isActive ? "vl-instruction-card-active" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    key={item.id}
+                  >
+                    <span className="vl-peach-pill inline-flex h-8 w-8 items-center justify-center text-xs font-bold">
+                      {instructionItems.indexOf(item) + 1}
+                    </span>
+                    <p className="mt-2 text-xs font-bold text-[var(--vl-text)]">
+                      {item.title}
+                    </p>
+                    <p className="mt-1 text-[0.68rem] leading-4 text-[var(--vl-text-muted)]">
+                      {item.detail}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
             <div
-              className="scanner-ring mx-auto grid h-24 w-24 place-items-center rounded-full border border-[#E97E7E]/35 bg-white/[0.035] shadow-[0_0_44px_rgba(233,126,126,0.18)]"
+              className="scanner-ring mx-auto grid h-24 w-24 place-items-center rounded-full border border-[var(--vl-peach-border)] bg-[rgba(253,233,227,0.52)] shadow-[0_0_44px_rgba(244,124,98,0.18),inset_0_1px_0_rgba(255,255,255,0.78)]"
               aria-hidden="true"
             >
-              <div className="h-[4.5rem] w-[4.5rem] rounded-full border border-white/10 bg-[#E97E7E]/8 shadow-[inset_0_0_32px_rgba(233,126,126,0.16)]" />
+              <div className="h-[4.5rem] w-[4.5rem] rounded-full border border-white/60 bg-[rgba(244,124,98,0.28)] shadow-[inset_0_0_32px_rgba(244,124,98,0.2)]" />
             </div>
-            <p className="mt-4 text-base font-semibold text-white">
+            <p className="mt-4 text-base font-bold text-[var(--vl-text)]">
               {title}
             </p>
-            <p className="mx-auto mt-2 max-w-64 text-sm leading-6 text-white/64">
+            <p className="mx-auto mt-2 max-w-64 text-sm leading-6 text-[var(--vl-text-muted)]">
               {detail}
             </p>
             <div
-              className="signal-preview signal-pulse relative mt-4 h-16 overflow-hidden rounded-[18px] border border-white/8 bg-white/[0.035]"
+              className="signal-preview signal-pulse vl-glass relative mt-4 h-16 overflow-hidden rounded-[18px]"
               aria-hidden="true"
             >
-              <div className="signal-glow absolute left-1/2 top-2 h-12 w-24 -translate-x-1/2 rounded-full bg-[#E97E7E]/12 blur-2xl" />
+              <div className="signal-glow absolute left-1/2 top-2 h-12 w-24 -translate-x-1/2 rounded-full bg-[rgba(244,124,98,0.12)] blur-2xl" />
               <svg
                 className="signal-wave absolute inset-x-3 bottom-1 h-14"
                 preserveAspectRatio="none"
@@ -262,7 +341,7 @@ export function CameraPreview({
                   d={signalPath}
                   fill="none"
                   opacity="0.18"
-                  stroke="#E97E7E"
+                  stroke="var(--vl-peach)"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="12"
@@ -270,7 +349,7 @@ export function CameraPreview({
                 <path
                   d={signalPath}
                   fill="none"
-                  stroke="#E97E7E"
+                  stroke="var(--vl-peach)"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="5"

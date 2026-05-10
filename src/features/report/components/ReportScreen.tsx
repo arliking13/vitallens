@@ -31,18 +31,18 @@ export function ReportScreen({ onBack, onRestart }: ReportScreenProps) {
       </div>
 
       <Card className="mt-4" delayMs={120} padding="lg">
-        <p className="text-sm font-semibold text-[#1C2520]">Wellness summary</p>
-        <p className="mt-3 text-base leading-7 text-[#66706A]">
+        <p className="text-sm font-bold text-[var(--vl-text)]">Wellness summary</p>
+        <p className="mt-3 text-base leading-7 text-[var(--vl-text-muted)]">
           Complete the pulse and breath checks to see a gentle wellness-focused
           overview of your session.
         </p>
       </Card>
 
       <div
-        className="animate-card-in mt-4 rounded-[22px] border border-[#ead8bd] bg-[#F4E7D2] px-4 py-3.5"
+        className="vl-glass animate-card-in mt-4 rounded-[22px] px-4 py-3.5"
         style={{ "--card-delay": "160ms" } as CSSProperties}
       >
-        <p className="text-sm font-medium leading-6 text-[#705225]">
+        <p className="text-sm font-medium leading-6 text-[var(--vl-text-muted)]">
           VitalLens is not a medical device and does not diagnose, treat, or
           measure blood pressure, SpO2, or ECG.
         </p>

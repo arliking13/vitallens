@@ -15,15 +15,15 @@ type AnimationStyle = CSSProperties & {
 
 const previewStyles = {
   pulse: {
-    accent: "#E97E7E",
-    background: "bg-[#fff5f5]",
-    glow: "bg-[#E97E7E]/10",
+    accent: "var(--vl-peach)",
+    background: "bg-[rgba(253,233,227,0.45)]",
+    glow: "bg-[rgba(244,124,98,0.12)]",
     path: "M4 76 C20 72 28 60 40 60 C54 60 60 82 74 82 C88 82 94 58 108 58 C124 58 130 82 144 82 C158 82 166 58 180 58 C194 58 202 80 216 80 C226 80 232 74 236 72",
   },
   breath: {
-    accent: "#69B9B0",
-    background: "bg-[#f0fbf9]",
-    glow: "bg-[#69B9B0]/14",
+    accent: "var(--vl-peach)",
+    background: "bg-white/35",
+    glow: "bg-[rgba(244,124,98,0.12)]",
     path: "M4 74 C26 32 54 32 76 74 C98 116 126 116 148 74 C170 32 198 32 236 74",
   },
 };
@@ -76,17 +76,17 @@ export function SignalPreview({
   return (
     <div
       className={[
-        "signal-preview animate-card-in overflow-hidden rounded-[24px] border border-[#E5EAE4] bg-white p-4 shadow-[0_18px_48px_rgba(28,37,32,0.055)]",
+        "signal-preview vl-glass-card animate-card-in overflow-hidden p-4",
         tone === "pulse" ? "signal-pulse" : "signal-breathe",
       ].join(" ")}
       style={animationStyle}
     >
       <div className="flex items-center justify-between gap-3 px-1 pb-4">
         <div>
-          <p className="text-sm font-semibold text-[#1C2520]">{label}</p>
-          <p className="mt-1 text-sm leading-5 text-[#66706A]">{caption}</p>
+          <p className="text-sm font-semibold text-[var(--vl-text)]">{label}</p>
+          <p className="mt-1 text-sm leading-5 text-[var(--vl-text-muted)]">{caption}</p>
         </div>
-        <span className="shrink-0 rounded-full bg-[#F5F7F4] px-3 py-1.5 text-xs font-semibold text-[#66706A]">
+        <span className="vl-glass-pill shrink-0 px-3 py-1.5 text-xs font-semibold text-[var(--vl-text-muted)]">
           {status}
         </span>
       </div>

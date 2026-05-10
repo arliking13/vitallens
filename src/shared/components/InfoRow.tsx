@@ -13,11 +13,11 @@ type AnimationStyle = CSSProperties & {
 };
 
 const dotClasses = {
-  neutral: "bg-[#AEB8B0]",
-  brand: "bg-[#157A6E]",
-  pulse: "bg-[#E97E7E]",
-  breath: "bg-[#69B9B0]",
-  warning: "bg-[#C49A52]",
+  neutral: "bg-[var(--vl-text-soft)]",
+  brand: "bg-[var(--vl-peach)]",
+  pulse: "bg-[var(--vl-peach)]",
+  breath: "bg-[var(--vl-peach)]",
+  warning: "bg-[var(--vl-warning)]",
 };
 
 export function InfoRow({
@@ -33,23 +33,23 @@ export function InfoRow({
 
   return (
     <div
-      className="animate-card-in rounded-[20px] border border-[#E5EAE4] bg-white px-4 py-3.5 shadow-[0_10px_26px_rgba(28,37,32,0.04)]"
+      className="vl-debug-row animate-card-in px-4 py-3.5"
       style={animationStyle}
     >
       <div className="flex items-center justify-between gap-4">
-        <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-[#66706A]">
+        <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-[var(--vl-text-muted)]">
           <span
             className={`h-2.5 w-2.5 rounded-full ${dotClasses[tone]}`}
             aria-hidden="true"
           />
           <span className="truncate">{label}</span>
         </span>
-        <span className="shrink-0 rounded-full bg-[#F5F7F4] px-3 py-1 text-sm font-semibold text-[#1C2520]">
+        <span className="vl-glass-pill shrink-0 px-3 py-1 text-sm font-semibold text-[var(--vl-text)]">
           {value}
         </span>
       </div>
       {detail ? (
-        <p className="mt-2 text-sm leading-6 text-[#66706A]">{detail}</p>
+        <p className="mt-2 text-sm leading-6 text-[var(--vl-text-muted)]">{detail}</p>
       ) : null}
     </div>
   );

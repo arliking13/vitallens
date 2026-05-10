@@ -7,12 +7,11 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary:
-    "border-[#157A6E] bg-[#157A6E] text-white shadow-[0_12px_28px_rgba(21,122,110,0.18)] hover:bg-[#116b60] focus-visible:outline-[#157A6E]",
+  primary: "vl-primary-button hover:brightness-[0.99] focus-visible:outline-[var(--vl-peach)]",
   secondary:
-    "border-[#E5EAE4] bg-white text-[#1C2520] shadow-[0_8px_20px_rgba(28,37,32,0.045)] hover:bg-[#fbfcfa] focus-visible:outline-[#157A6E]",
+    "vl-secondary-button hover:bg-white/70 focus-visible:outline-[var(--vl-peach)]",
   ghost:
-    "border-transparent bg-transparent text-[#66706A] hover:bg-white/70 focus-visible:outline-[#157A6E]",
+    "border-transparent bg-transparent text-[var(--vl-text-muted)] hover:bg-white/50 focus-visible:outline-[var(--vl-peach)]",
 };
 
 export function Button({
@@ -24,7 +23,7 @@ export function Button({
   return (
     <button
       className={[
-        "interactive-press inline-flex min-h-14 items-center justify-center rounded-[18px] border px-5 text-base font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "interactive-press inline-flex min-h-14 items-center justify-center px-5 text-base font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         variantClasses[variant],
         className,
       ]

@@ -33,7 +33,7 @@ export function Card({
   return (
     <div
       className={[
-        "animate-card-in rounded-[24px] border border-[#E5EAE4] bg-white shadow-[0_18px_48px_rgba(28,37,32,0.055)]",
+        "vl-glass-card animate-card-in",
         paddingClasses[padding],
         className,
       ]

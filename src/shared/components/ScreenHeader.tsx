@@ -16,13 +16,12 @@ export function ScreenHeader({
   return (
     <div>
       <StatusBadge tone={tone}>{status}</StatusBadge>
-      <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-normal text-[#1C2520]">
+      <h1 className="mt-5 text-4xl font-bold leading-[1.03] tracking-normal text-[var(--vl-text)]">
         {title}
       </h1>
-      <p className="mt-4 max-w-sm text-base leading-7 text-[#66706A]">
+      <p className="mt-4 max-w-sm text-base leading-7 text-[var(--vl-text-muted)]">
         {description}
       </p>
     </div>
   );
 }
-

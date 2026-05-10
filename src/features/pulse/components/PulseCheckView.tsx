@@ -100,19 +100,8 @@ function getScannerTitle({
     return "Place finger over sensor";
   }
 
-  if (fingerGateState === "stabilizing") {
-    return "Hold steady";
-  }
-
-  if (fingerGateState === "recording") {
-    return "Recording clean signal";
-  }
-
-  if (fingerGateState === "finger-lost") {
-    return "Place finger over sensor";
-  }
-
   if (
+    fingerGateState === "finger-lost" ||
     signalQuality === "unstable" ||
     signalQuality === "too-dark" ||
     signalQuality === "too-bright"
@@ -120,7 +109,7 @@ function getScannerTitle({
     return "Need cleaner signal";
   }
 
-  return "Place finger over sensor";
+  return "Reading in progress";
 }
 
 function getScannerDetail({
@@ -146,7 +135,7 @@ function getScannerDetail({
     return pulseMessage;
   }
 
-  return "About 20 seconds gives a cleaner estimate.";
+  return "Stay still for the most accurate result.";
 }
 
 export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
@@ -321,39 +310,50 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         />
       </div>
 
-      <section className="animate-card-in mt-4 rounded-[24px] border border-[#E5EAE4] bg-white p-4 shadow-[0_14px_34px_rgba(28,37,32,0.045)]">
+      <section className="vl-result-card animate-card-in mt-4 p-4">
         {hasPulseEstimate ? (
           <div>
-            <p className="text-sm font-semibold text-[#66706A]">
-              Estimated pulse
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm font-bold text-[var(--vl-text-muted)]">
+                Estimated pulse
+              </p>
+              <span
+                className={[
+                  "rounded-full px-3 py-1 text-xs font-bold",
+                  pulseEstimate.confidence === "good"
+                    ? "border border-[#BDE5CB] bg-[var(--vl-success-soft)] text-[var(--vl-success)]"
+                    : "vl-peach-pill",
+                ].join(" ")}
+              >
+                Estimate confidence: {pulseEstimate.confidence}
+              </span>
+            </div>
             <div className="mt-2 flex items-end gap-2">
-              <span className="text-4xl font-semibold tracking-normal text-[#1C2520]">
+              <span className="text-5xl font-bold tracking-normal text-[var(--vl-text)]">
                 {pulseEstimate.bpm}
               </span>
-              <span className="pb-1 text-base font-semibold text-[#66706A]">
+              <span className="pb-1.5 text-base font-bold text-[var(--vl-text-muted)]">
                 BPM
               </span>
             </div>
-            <p className="mt-3 text-sm leading-6 text-[#66706A]">
-              Estimate confidence: {pulseEstimate.confidence}. Non-medical
-              wellness estimate.
+            <p className="mt-3 text-sm leading-6 text-[var(--vl-text-muted)]">
+              Non-medical wellness estimate.
             </p>
             {fingerGateState === "finger-lost" &&
             pulseEstimate.usedLastCleanWindow ? (
-              <p className="mt-2 text-sm leading-6 text-[#66706A]">
+              <p className="mt-2 text-sm leading-6 text-[var(--vl-text-muted)]">
                 Estimate based on last clean window.
               </p>
             ) : null}
           </div>
         ) : (
           <div>
-            <p className="text-lg font-semibold text-[#1C2520]">
+            <p className="text-lg font-bold text-[var(--vl-text)]">
               {scannerTitle === "Need cleaner signal"
                 ? "Need cleaner signal"
                 : "Keep holding steady"}
             </p>
-            <p className="mt-2 text-sm leading-6 text-[#66706A]">
+            <p className="mt-2 text-sm leading-6 text-[var(--vl-text-muted)]">
               {scannerTitle === "Need cleaner signal"
                 ? pulseEstimate.message
                 : "About 20 seconds gives a cleaner estimate."}
@@ -362,14 +362,14 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         )}
       </section>
 
-      <details className="mt-4 overflow-hidden rounded-[22px] border border-[#E5EAE4] bg-white shadow-[0_12px_30px_rgba(28,37,32,0.035)]">
-        <summary className="interactive-press flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 text-sm font-semibold text-[#1C2520] marker:hidden">
+      <details className="vl-glass mt-4 overflow-hidden rounded-[22px]">
+        <summary className="interactive-press flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 text-sm font-bold text-[var(--vl-text)] marker:hidden">
           Debug details
-          <span className="rounded-full bg-[#F5F7F4] px-3 py-1 text-xs font-semibold text-[#66706A]">
+          <span className="vl-glass-pill px-3 py-1 text-xs font-bold text-[var(--vl-text-muted)]">
             Hidden
           </span>
         </summary>
-        <div className="grid gap-3 border-t border-[#E5EAE4] bg-[#FBFCFA] p-3">
+        <div className="grid gap-3 border-t border-[var(--vl-glass-border)] bg-white/30 p-3">
           <InfoRow
             delayMs={40}
             detail={error ?? undefined}
@@ -438,7 +438,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         </div>
       </details>
 
-      <div className="sticky bottom-0 z-20 -mx-5 mt-auto border-t border-[#E5EAE4] bg-[#F5F7F4]/95 px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 backdrop-blur-xl">
+      <div className="sticky bottom-0 z-20 -mx-5 mt-auto border-t border-[var(--vl-glass-border)] bg-[rgba(250,247,242,0.78)] px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 backdrop-blur-xl">
         <div className="space-y-3">
           <Button className="w-full" onClick={handlePulseCheckButtonClick}>
             {isCheckActive ? "Stop check" : "Start pulse check"}
