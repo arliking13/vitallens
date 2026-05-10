@@ -9,6 +9,9 @@ const DEFAULT_WATSONX_VERSION = "2024-03-14";
 const DEFAULT_WATSONX_MODEL_ID = "ibm/granite-3-3-2b-instruct";
 const WATSONX_MAX_NEW_TOKENS = 120;
 const WATSONX_ERROR_LOG_LIMIT = 2000;
+const IBM_PROJECT_ID_V4_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_PREFIX_PATTERN = /^[0-9a-f]{8}-/i;
 const fallbackSummary: WellnessSummaryResponse = {
   nextStep:
     "Review your local results and repeat the check later if you want another wellness snapshot.",
@@ -119,6 +122,20 @@ function buildWatsonxGenerationUrl(endpoint: string, version: string) {
     : `${trimmedEndpoint}/ml/v1`;
 
   return `${mlBase}/text/generation?version=${encodeURIComponent(version)}`;
+}
+
+function validateWatsonxRequestConfig(config: WatsonxConfig) {
+  if (!IBM_PROJECT_ID_V4_PATTERN.test(config.projectId)) {
+    throw new Error(
+      `Invalid IBM_WATSONX_PROJECT_ID format: ${config.projectId}`,
+    );
+  }
+
+  if (UUID_PREFIX_PATTERN.test(config.modelId)) {
+    throw new Error(
+      `IBM_WATSONX_MODEL_ID looks like a project id: ${config.modelId}`,
+    );
+  }
 }
 
 function truncateForServerLog(value: string) {
@@ -276,21 +293,30 @@ export async function POST(request: Request) {
   }
 
   try {
+    validateWatsonxRequestConfig(config);
+    console.log("[wellness-report] watsonx request config", {
+      endpoint: config.endpoint,
+      modelId: config.modelId,
+      projectId: config.projectId,
+      version: config.version,
+    });
+
     const accessToken = await getIamAccessToken(config.apiKey);
+    const watsonxRequestBody = {
+      input: buildPrompt(reportInput),
+      model_id: config.modelId,
+      parameters: {
+        decoding_method: "greedy",
+        max_new_tokens: WATSONX_MAX_NEW_TOKENS,
+        min_new_tokens: 20,
+        temperature: 0,
+      },
+      project_id: config.projectId,
+    };
     const response = await fetch(
       buildWatsonxGenerationUrl(config.endpoint, config.version),
       {
-        body: JSON.stringify({
-          input: buildPrompt(reportInput),
-          model_id: config.modelId,
-          parameters: {
-            decoding_method: "greedy",
-            max_new_tokens: WATSONX_MAX_NEW_TOKENS,
-            min_new_tokens: 20,
-            temperature: 0,
-          },
-          project_id: config.projectId,
-        }),
+        body: JSON.stringify(watsonxRequestBody),
         headers: {
           Accept: "application/json",
           Authorization: `Bearer ${accessToken}`,
