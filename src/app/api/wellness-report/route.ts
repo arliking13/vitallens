@@ -6,6 +6,9 @@ import type {
 export const runtime = "nodejs";
 
 const DEFAULT_WATSONX_VERSION = "2024-03-14";
+const DEFAULT_WATSONX_MODEL_ID = "ibm/granite-3-3-2b-instruct";
+const WATSONX_MAX_NEW_TOKENS = 120;
+const WATSONX_ERROR_LOG_LIMIT = 2000;
 const fallbackSummary: WellnessSummaryResponse = {
   nextStep:
     "Review your local results and repeat the check later if you want another wellness snapshot.",
@@ -29,6 +32,24 @@ type WatsonxChatResponse = {
   }>;
 };
 
+type WatsonxEnvStatus = {
+  hasApiKey: boolean;
+  hasEndpoint: boolean;
+  hasModelId: boolean;
+  hasProjectId: boolean;
+  hasVersionOverride: boolean;
+  usingDefaultModelId: boolean;
+};
+
+type WatsonxConfig = {
+  apiKey: string;
+  endpoint: string;
+  envStatus: WatsonxEnvStatus;
+  modelId: string;
+  projectId: string;
+  version: string;
+};
+
 function getEnvValue(...keys: string[]) {
   for (const key of keys) {
     const value = process.env[key];
@@ -40,7 +61,10 @@ function getEnvValue(...keys: string[]) {
   return undefined;
 }
 
-function getWatsonxConfig() {
+function getWatsonxConfig(): {
+  config: WatsonxConfig | null;
+  envStatus: WatsonxEnvStatus;
+} {
   const apiKey = getEnvValue("IBM_WATSONX_API_KEY", "WATSONX_API_KEY");
   const endpoint = getEnvValue(
     "IBM_WATSONX_URL",
@@ -48,35 +72,75 @@ function getWatsonxConfig() {
     "WATSONX_URL",
     "WATSONX_ENDPOINT",
   );
-  const modelId = getEnvValue("IBM_WATSONX_MODEL_ID", "WATSONX_MODEL_ID");
+  const modelIdFromEnv = getEnvValue(
+    "IBM_WATSONX_MODEL_ID",
+    "WATSONX_MODEL_ID",
+  );
   const projectId = getEnvValue(
     "IBM_WATSONX_PROJECT_ID",
     "WATSONX_PROJECT_ID",
   );
-  const version =
-    getEnvValue("IBM_WATSONX_VERSION", "WATSONX_VERSION") ??
-    DEFAULT_WATSONX_VERSION;
+  const versionFromEnv = getEnvValue("IBM_WATSONX_VERSION", "WATSONX_VERSION");
+  const modelId = modelIdFromEnv ?? DEFAULT_WATSONX_MODEL_ID;
+  const version = versionFromEnv ?? DEFAULT_WATSONX_VERSION;
+  const envStatus = {
+    hasApiKey: Boolean(apiKey),
+    hasEndpoint: Boolean(endpoint),
+    hasModelId: Boolean(modelIdFromEnv),
+    hasProjectId: Boolean(projectId),
+    hasVersionOverride: Boolean(versionFromEnv),
+    usingDefaultModelId: !modelIdFromEnv,
+  };
 
-  if (!apiKey || !endpoint || !modelId || !projectId) {
-    return null;
+  if (!apiKey || !endpoint || !projectId) {
+    return {
+      config: null,
+      envStatus,
+    };
   }
 
   return {
-    apiKey,
-    endpoint,
-    modelId,
-    projectId,
-    version,
+    config: {
+      apiKey,
+      endpoint,
+      envStatus,
+      modelId,
+      projectId,
+      version,
+    },
+    envStatus,
   };
 }
 
-function buildWatsonxChatUrl(endpoint: string, version: string) {
+function buildWatsonxGenerationUrl(endpoint: string, version: string) {
   const trimmedEndpoint = endpoint.replace(/\/+$/, "");
   const mlBase = trimmedEndpoint.endsWith("/ml/v1")
     ? trimmedEndpoint
     : `${trimmedEndpoint}/ml/v1`;
 
-  return `${mlBase}/text/chat?version=${encodeURIComponent(version)}`;
+  return `${mlBase}/text/generation?version=${encodeURIComponent(version)}`;
+}
+
+function truncateForServerLog(value: string) {
+  return value.length > WATSONX_ERROR_LOG_LIMIT
+    ? `${value.slice(0, WATSONX_ERROR_LOG_LIMIT)}...`
+    : value;
+}
+
+function logWatsonxError({
+  envStatus,
+  responseText,
+  status,
+}: {
+  envStatus: WatsonxEnvStatus;
+  responseText: string;
+  status: number;
+}) {
+  console.error("[wellness-report] IBM watsonx text/generation failed", {
+    env: envStatus,
+    responseText: truncateForServerLog(responseText),
+    status,
+  });
 }
 
 async function getIamAccessToken(apiKey: string) {
@@ -91,12 +155,17 @@ async function getIamAccessToken(apiKey: string) {
     },
     method: "POST",
   });
+  const responseText = await response.text();
 
   if (!response.ok) {
+    console.error("[wellness-report] IBM IAM token request failed", {
+      responseText: truncateForServerLog(responseText),
+      status: response.status,
+    });
     throw new Error("IBM IAM token request failed.");
   }
 
-  const tokenResponse = (await response.json()) as { access_token?: unknown };
+  const tokenResponse = JSON.parse(responseText) as { access_token?: unknown };
 
   if (typeof tokenResponse.access_token !== "string") {
     throw new Error("IBM IAM token response was missing an access token.");
@@ -105,16 +174,38 @@ async function getIamAccessToken(apiKey: string) {
   return tokenResponse.access_token;
 }
 
+function buildCompactReportInput(reportInput: WellnessReportInput) {
+  return {
+    breath: reportInput.breath
+      ? {
+          motionLabel: reportInput.breath.motionLabel,
+          qualityLabel: reportInput.breath.qualityLabel,
+          rhythmLabel: reportInput.breath.rhythmLabel,
+          sampleSeconds: reportInput.breath.sampleSeconds,
+          source: reportInput.breath.source,
+        }
+      : null,
+    pulse: reportInput.pulse
+      ? {
+          bpm: reportInput.pulse.bpm,
+          confidence: reportInput.pulse.confidence,
+          sampleSeconds: reportInput.pulse.sampleSeconds,
+          signalLabel: reportInput.pulse.signalLabel,
+          source: reportInput.pulse.source,
+        }
+      : null,
+  };
+}
+
 function buildPrompt(reportInput: WellnessReportInput) {
+  const compactReportInput = buildCompactReportInput(reportInput);
+
   return [
-    "Generate a short wellness-only check-in summary from this structured VitalLens data.",
-    "Do not diagnose. Do not provide treatment advice. Do not claim clinical accuracy.",
-    "Do not mention medical conditions. Do not classify results as normal or abnormal.",
-    "Use calm, simple language.",
-    "Mention that the result is based on a pulse estimate and breath motion check when both are present.",
-    "Return only JSON with keys: summary, observations, nextStep.",
-    "",
-    JSON.stringify(reportInput, null, 2),
+    "You write concise, safe, wellness-only JSON summaries for VitalLens.",
+    "Rules: no diagnosis, treatment advice, clinical accuracy claims, medical conditions, or normal/abnormal labels.",
+    "Use only this structured data. Mention pulse estimate and breath motion check when present.",
+    'Return JSON only: {"summary":"1 short sentence","observations":["short point 1","short point 2"],"nextStep":"1 short safe next step"}.',
+    `Data: ${JSON.stringify(compactReportInput)}`,
   ].join("\n");
 }
 
@@ -190,37 +281,31 @@ export async function POST(request: Request) {
     );
   }
 
-  const config = getWatsonxConfig();
+  const { config, envStatus } = getWatsonxConfig();
 
   if (!config) {
+    console.warn("[wellness-report] IBM watsonx config missing", {
+      env: envStatus,
+    });
+
     return Response.json(fallbackSummary);
   }
 
   try {
     const accessToken = await getIamAccessToken(config.apiKey);
     const response = await fetch(
-      buildWatsonxChatUrl(config.endpoint, config.version),
+      buildWatsonxGenerationUrl(config.endpoint, config.version),
       {
         body: JSON.stringify({
-          max_tokens: 220,
-          messages: [
-            {
-              content:
-                "You write concise, safe, wellness-only summaries for a browser wellness check-in.",
-              role: "system",
-            },
-            {
-              content: buildPrompt(reportInput),
-              role: "user",
-            },
-          ],
+          input: buildPrompt(reportInput),
           model_id: config.modelId,
-          project_id: config.projectId,
-          response_format: {
-            type: "json_object",
+          parameters: {
+            decoding_method: "greedy",
+            max_new_tokens: WATSONX_MAX_NEW_TOKENS,
+            min_new_tokens: 20,
+            temperature: 0,
           },
-          temperature: 0.2,
-          time_limit: 4000,
+          project_id: config.projectId,
         }),
         headers: {
           Accept: "application/json",
@@ -230,12 +315,19 @@ export async function POST(request: Request) {
         method: "POST",
       },
     );
+    const responseText = await response.text();
 
     if (!response.ok) {
+      logWatsonxError({
+        envStatus: config.envStatus,
+        responseText,
+        status: response.status,
+      });
+
       throw new Error("IBM watsonx request failed.");
     }
 
-    const watsonxResponse = (await response.json()) as WatsonxChatResponse;
+    const watsonxResponse = JSON.parse(responseText) as WatsonxChatResponse;
     const generatedText = extractGeneratedText(watsonxResponse);
 
     if (!generatedText) {
@@ -243,7 +335,12 @@ export async function POST(request: Request) {
     }
 
     return Response.json(parseSummary(generatedText));
-  } catch {
+  } catch (error) {
+    console.error("[wellness-report] Returning fallback summary", {
+      env: config.envStatus,
+      message: error instanceof Error ? error.message : "Unknown IBM error.",
+    });
+
     return Response.json(fallbackSummary);
   }
 }
