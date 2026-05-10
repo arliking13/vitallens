@@ -321,7 +321,6 @@ export function PulseCheckView({
           isPulseCheckActive={isPulseCheckActive}
           isSampling={isSampling}
           liveSignal={smoothedSignal}
-          onOpenScanGuide={() => setIsScanGuideOpen(true)}
           scannerDetail={scannerDetail}
           scannerTitle={scannerTitle}
           showCameraPreview={showCameraPreview}
