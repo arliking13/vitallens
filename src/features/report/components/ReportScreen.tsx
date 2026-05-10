@@ -4,13 +4,19 @@ import { Button } from "@/shared/components/Button";
 import { Card } from "@/shared/components/Card";
 import { InfoRow } from "@/shared/components/InfoRow";
 import { ScreenHeader } from "@/shared/components/ScreenHeader";
+import type { BreathMotionResult } from "@/shared/types/check-flow";
 
 type ReportScreenProps = {
+  breathResult: BreathMotionResult | null;
   onBack: () => void;
   onRestart: () => void;
 };
 
-export function ReportScreen({ onBack, onRestart }: ReportScreenProps) {
+export function ReportScreen({
+  breathResult,
+  onBack,
+  onRestart,
+}: ReportScreenProps) {
   return (
     <div className="flex flex-col">
       <ScreenHeader
@@ -22,17 +28,34 @@ export function ReportScreen({ onBack, onRestart }: ReportScreenProps) {
         <InfoRow delayMs={40} label="Pulse result" tone="pulse" value="Pending" />
         <InfoRow
           delayMs={80}
-          label="Breathing result"
-          tone="breath"
-          value="Pending"
+          label="Breath result"
+          tone={breathResult ? "breath" : "neutral"}
+          value={breathResult ? "Completed" : "Pending"}
         />
+        {breathResult ? (
+          <>
+            <InfoRow
+              delayMs={120}
+              label="Rhythm"
+              tone="breath"
+              value={breathResult.rhythmLabel}
+            />
+            <InfoRow
+              delayMs={160}
+              label="Sample"
+              tone="breath"
+              value={`${breathResult.durationSeconds}s`}
+            />
+          </>
+        ) : null}
       </div>
 
-      <Card className="mt-4" delayMs={120} padding="lg">
+      <Card className="mt-4" delayMs={breathResult ? 200 : 120} padding="lg">
         <p className="text-sm font-bold text-[var(--vl-text)]">Wellness summary</p>
         <p className="mt-3 text-base leading-7 text-[var(--vl-text-muted)]">
-          Complete the pulse and breath checks to see a gentle wellness-focused
-          overview of your session.
+          {breathResult
+            ? "Your breath motion check is included as a wellness-only motion summary."
+            : "Complete the pulse and breath checks to see a gentle wellness-focused overview of your session."}
         </p>
       </Card>
 
@@ -41,8 +64,7 @@ export function ReportScreen({ onBack, onRestart }: ReportScreenProps) {
         style={{ "--card-delay": "160ms" } as CSSProperties}
       >
         <p className="text-sm font-medium leading-6 text-[var(--vl-text-muted)]">
-          VitalLens is not a medical device and does not diagnose, treat, or
-          measure blood pressure, SpO2, or ECG.
+          VitalLens is wellness-only and not for medical decisions.
         </p>
       </div>
 

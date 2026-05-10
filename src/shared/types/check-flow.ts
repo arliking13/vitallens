@@ -6,3 +6,14 @@ export type StepDefinition = {
   shortLabel: string;
 };
 
+export type BreathRhythmLabel = "Steady" | "Uneven" | "Not enough motion";
+
+export type BreathQualityLabel = "Good" | "Fair" | "Low";
+
+export type BreathMotionResult = {
+  durationSeconds: number;
+  motionDetected: boolean;
+  qualityLabel: BreathQualityLabel;
+  rhythmLabel: BreathRhythmLabel;
+  sampleCount: number;
+};
