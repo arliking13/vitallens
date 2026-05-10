@@ -16,11 +16,12 @@ import {
 type CameraPreviewProps = {
   delayMs?: number;
   fingerGateState?: FingerGateState;
+  hasPulseEstimate?: boolean;
+  isPulseCheckActive?: boolean;
   isSampling?: boolean;
   liveSignal?: number[];
   scannerDetail?: string;
   scannerTitle?: string;
-  scannerVisualState?: ScannerVisualState;
   showCameraPreview?: boolean;
   status: CameraStatus;
   stream: MediaStream | null;
@@ -206,11 +207,12 @@ function buildSignalPath(values: number[]) {
 export function CameraPreview({
   delayMs = 40,
   fingerGateState,
+  hasPulseEstimate = false,
+  isPulseCheckActive = false,
   isSampling = false,
   liveSignal,
   scannerDetail,
   scannerTitle,
-  scannerVisualState = "idle",
   showCameraPreview = false,
   status,
   stream,
@@ -228,6 +230,11 @@ export function CameraPreview({
     isSampling,
     status,
   });
+  const scannerVisualState: ScannerVisualState = hasPulseEstimate
+    ? "ready"
+    : isPulseCheckActive
+      ? "scanning"
+      : "idle";
   const title = scannerTitle ?? copy.title;
   const detail = scannerDetail ?? copy.detail;
   const signalPath = buildSignalPath(liveSignal ?? []);
@@ -360,6 +367,7 @@ export function CameraPreview({
                 .filter(Boolean)
                 .join(" ")}
               aria-hidden="true"
+              data-scanner-state={scannerVisualState}
             >
               {scannerVisualState === "ready" ? (
                 <span className="vl-scanner-icon" aria-hidden="true">

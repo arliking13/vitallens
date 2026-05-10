@@ -774,17 +774,17 @@ button {
   }
 
   35% {
-    filter: drop-shadow(0 0 18px rgba(244, 124, 98, 0.65));
-    transform: scale(1.18);
+    filter: drop-shadow(0 0 22px rgba(244, 124, 98, 0.75));
+    transform: scale(1.22);
   }
 
   55% {
-    transform: scale(0.96);
+    transform: scale(0.94);
   }
 
   75% {
-    filter: drop-shadow(0 0 12px rgba(244, 124, 98, 0.45));
-    transform: scale(1.1);
+    filter: drop-shadow(0 0 14px rgba(244, 124, 98, 0.55));
+    transform: scale(1.12);
   }
 }
 
