@@ -330,7 +330,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
                   </span>
                   {cleanWindowDurationLabel ? (
                     <span className="vl-glass-pill px-3 py-1 text-xs font-bold text-[var(--vl-text-muted)]">
-                      Window: {cleanWindowDurationLabel}
+                      Sample: {cleanWindowDurationLabel}
                     </span>
                   ) : null}
                 </div>
