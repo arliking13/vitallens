@@ -24,7 +24,7 @@ function getErrorName(error: unknown) {
     return String(error.name);
   }
 
-  return "";
+  return "UnknownError";
 }
 
 function getErrorMessage(error: unknown) {
@@ -103,7 +103,14 @@ export function useRearCamera() {
 
     if (!navigator.mediaDevices?.getUserMedia) {
       setStatus("error");
-      setError("Camera access is not available in this browser context.");
+      setError(
+        "UnsupportedError — Camera access is unavailable. Please allow camera access in Safari settings and reload the page.",
+      );
+      console.error("[pulse-camera] getUserMedia failed", {
+        message:
+          "Camera access is unavailable. Please allow camera access in Safari settings and reload the page.",
+        name: "UnsupportedError",
+      });
       return;
     }
 
@@ -131,9 +138,14 @@ export function useRearCamera() {
         return;
       }
 
+      const errorName = getErrorName(cameraError);
+      const errorMessage = getErrorMessage(cameraError);
+
+      console.error("[pulse-camera] getUserMedia failed", cameraError);
+
       setStream(null);
       setTorchState("unsupported");
-      setError(getErrorMessage(cameraError));
+      setError(`${errorName} — ${errorMessage}`);
       setStatus(isPermissionDenied(cameraError) ? "denied" : "error");
     }
   }, []);
@@ -156,4 +168,3 @@ export function useRearCamera() {
     stopCamera,
   };
 }
-

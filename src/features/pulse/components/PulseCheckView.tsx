@@ -225,12 +225,12 @@ export function PulseCheckView({
       return;
     }
 
-    onResult(null);
     resetSamples();
     cameraStatusAtStartRef.current = null;
     torchStateAtStartRef.current = null;
     shouldAutoStartSignalRef.current = true;
     void startCamera();
+    onResult(null);
   }
 
   function getPulseCheckResult(): PulseCheckResult | null {
@@ -338,6 +338,16 @@ export function PulseCheckView({
           videoRef={videoRef}
         />
       </div>
+
+      {error ? (
+        <div className="mt-3 rounded-[18px] border border-[rgba(244,124,98,0.28)] bg-[rgba(253,233,227,0.62)] px-4 py-3 text-sm leading-5 text-[var(--vl-text)]">
+          <p className="font-bold">Camera error: {error}</p>
+          <p className="mt-1 text-[var(--vl-text-muted)]">
+            Camera access is unavailable. Please allow camera access in Safari
+            settings and reload the page.
+          </p>
+        </div>
+      ) : null}
 
       {hasPulseEstimate ? (
         <section className="vl-result-card animate-card-in mt-4 p-4">
