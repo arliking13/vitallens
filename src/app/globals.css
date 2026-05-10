@@ -627,9 +627,12 @@ button {
 }
 
 .vl-heartbeat {
-  animation: vl-heartbeat 0.8s ease-in-out infinite;
-  transform-box: fill-box;
+  align-items: center;
+  animation: vl-heartbeat 0.85s ease-in-out infinite;
+  display: inline-flex;
+  justify-content: center;
   transform-origin: center center;
+  will-change: transform, filter;
 }
 
 .vl-ring-pulse::before {
@@ -762,24 +765,22 @@ button {
 @keyframes vl-heartbeat {
   0%,
   100% {
-    filter:
-      drop-shadow(0 5px 10px rgba(92, 27, 14, 0.14))
-      drop-shadow(0 0 0 rgba(244, 124, 98, 0));
-    opacity: 0.94;
+    filter: drop-shadow(0 0 0 rgba(244, 124, 98, 0));
     transform: scale(1);
   }
 
-  44% {
-    filter:
-      drop-shadow(0 8px 14px rgba(92, 27, 14, 0.18))
-      drop-shadow(0 0 14px rgba(244, 124, 98, 0.38))
-      drop-shadow(0 0 10px rgba(255, 255, 255, 0.48));
-    opacity: 1;
-    transform: translateY(-1px) scale(1.16);
+  35% {
+    filter: drop-shadow(0 0 18px rgba(244, 124, 98, 0.65));
+    transform: scale(1.22);
   }
 
-  68% {
-    transform: scale(1);
+  55% {
+    transform: scale(0.96);
+  }
+
+  75% {
+    filter: drop-shadow(0 0 12px rgba(244, 124, 98, 0.45));
+    transform: scale(1.12);
   }
 }
 

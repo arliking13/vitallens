@@ -16,11 +16,11 @@ import {
 type CameraPreviewProps = {
   delayMs?: number;
   fingerGateState?: FingerGateState;
-  isActivelyScanning?: boolean;
   isSampling?: boolean;
   liveSignal?: number[];
   scannerDetail?: string;
   scannerTitle?: string;
+  scannerVisualState?: ScannerVisualState;
   showCameraPreview?: boolean;
   status: CameraStatus;
   stream: MediaStream | null;
@@ -30,6 +30,8 @@ type CameraPreviewProps = {
 type AnimationStyle = CSSProperties & {
   "--card-delay"?: string;
 };
+
+type ScannerVisualState = "idle" | "scanning" | "ready";
 
 const scannerCopy: Record<
   CameraStatus,
@@ -115,7 +117,6 @@ const instructionItems = [
 ] as const;
 
 type InstructionId = (typeof instructionItems)[number]["id"];
-type ScannerCoreState = "idle" | "scanning" | "ready";
 
 function getScannerCopy({
   fingerGateState,
@@ -160,30 +161,12 @@ function getActiveInstruction({
   return "scan";
 }
 
-function getScannerCoreState({
-  isActivelyScanning,
-  title,
-}: {
-  isActivelyScanning: boolean;
-  title: string;
-}): ScannerCoreState {
-  if (title === "Estimate ready") {
-    return "ready";
-  }
-
-  if (isActivelyScanning) {
-    return "scanning";
-  }
-
-  return "idle";
-}
-
-function getStatusPillLabel(scannerCoreState: ScannerCoreState) {
-  if (scannerCoreState === "ready") {
+function getStatusPillLabel(scannerVisualState: ScannerVisualState) {
+  if (scannerVisualState === "ready") {
     return "Estimate ready";
   }
 
-  if (scannerCoreState === "scanning") {
+  if (scannerVisualState === "scanning") {
     return "Scanning";
   }
 
@@ -223,11 +206,11 @@ function buildSignalPath(values: number[]) {
 export function CameraPreview({
   delayMs = 40,
   fingerGateState,
-  isActivelyScanning = false,
   isSampling = false,
   liveSignal,
   scannerDetail,
   scannerTitle,
+  scannerVisualState = "idle",
   showCameraPreview = false,
   status,
   stream,
@@ -247,13 +230,6 @@ export function CameraPreview({
   });
   const title = scannerTitle ?? copy.title;
   const detail = scannerDetail ?? copy.detail;
-  const scannerCoreState = getScannerCoreState({ isActivelyScanning, title });
-  const ScannerCoreIcon =
-    scannerCoreState === "ready"
-      ? CheckIcon
-      : scannerCoreState === "scanning"
-        ? HeartIcon
-        : FingerTapIcon;
   const signalPath = buildSignalPath(liveSignal ?? []);
   const animationStyle: AnimationStyle = {
     "--card-delay": `${delayMs}ms`,
@@ -291,19 +267,19 @@ export function CameraPreview({
         <span
           className={[
             "vl-state-pill",
-            `vl-state-pill-${scannerCoreState}`,
+            `vl-state-pill-${scannerVisualState}`,
           ].join(" ")}
         >
-          {scannerCoreState === "ready" ? (
+          {scannerVisualState === "ready" ? (
             <CheckIcon className="h-3.5 w-3.5" />
-          ) : scannerCoreState === "scanning" ? (
-            <span className="vl-state-icon vl-heartbeat" aria-hidden="true">
+          ) : scannerVisualState === "scanning" ? (
+            <span className="vl-state-icon" aria-hidden="true">
               <HeartIcon className="h-3.5 w-3.5" />
             </span>
           ) : (
             <span className="vl-state-dot" aria-hidden="true" />
           )}
-          <span>{getStatusPillLabel(scannerCoreState)}</span>
+          <span>{getStatusPillLabel(scannerVisualState)}</span>
         </span>
       </div>
 
@@ -335,7 +311,7 @@ export function CameraPreview({
         >
           <div
             className={[
-              scannerCoreState === "scanning" ? "scanner-glow" : "",
+              scannerVisualState === "scanning" ? "scanner-glow" : "",
               "absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(244,124,98,0.12)] blur-2xl",
             ]
               .filter(Boolean)
@@ -378,25 +354,26 @@ export function CameraPreview({
             <div
               className={[
                 "vl-scanner-core",
-                `vl-scanner-core-${scannerCoreState}`,
-                scannerCoreState === "scanning" ? "vl-ring-pulse" : "",
+                `vl-scanner-core-${scannerVisualState}`,
+                scannerVisualState === "scanning" ? "vl-ring-pulse" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
               aria-hidden="true"
             >
-              <span
-                className={[
-                  "vl-scanner-icon",
-                  isActivelyScanning ? "vl-heartbeat" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                <ScannerCoreIcon
-                  className={scannerCoreState === "idle" ? "h-6 w-6" : "h-7 w-7"}
-                />
-              </span>
+              {scannerVisualState === "ready" ? (
+                <span className="vl-scanner-icon" aria-hidden="true">
+                  <CheckIcon className="h-7 w-7" />
+                </span>
+              ) : scannerVisualState === "scanning" ? (
+                <span className="vl-scanner-icon vl-heartbeat" aria-hidden="true">
+                  <HeartIcon className="h-7 w-7" />
+                </span>
+              ) : (
+                <span className="vl-scanner-icon" aria-hidden="true">
+                  <FingerTapIcon className="h-6 w-6" />
+                </span>
+              )}
             </div>
             <p className="mt-2.5 text-base font-bold text-[var(--vl-text)]">
               {title}
