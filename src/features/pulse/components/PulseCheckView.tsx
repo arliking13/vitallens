@@ -7,6 +7,7 @@ import { InfoRow } from "@/shared/components/InfoRow";
 import { HeartIcon } from "@/shared/components/LineIcons";
 
 import { CameraPreview } from "./CameraPreview";
+import { PulseScanGuide } from "./PulseScanGuide";
 import {
   buildPpgDebugReport,
   downloadPpgDebugReport,
@@ -130,6 +131,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
     enabled: false,
     stream: null,
   });
+  const [isScanGuideOpen, setIsScanGuideOpen] = useState(false);
   const { error, startCamera, status, stopCamera, stream, torchState } =
     useRearCamera();
   const {
@@ -274,6 +276,13 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         <p className="mt-3 max-w-sm text-base leading-7 text-[var(--vl-text-muted)]">
           Cover the rear camera and hold still during the reading.
         </p>
+        <Button
+          className="mt-4 min-h-11 px-4 text-sm"
+          onClick={() => setIsScanGuideOpen(true)}
+          variant="secondary"
+        >
+          How to scan
+        </Button>
       </div>
 
       <div className="mt-5">
@@ -449,6 +458,10 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
           </div>
         </div>
       </div>
+
+      {isScanGuideOpen ? (
+        <PulseScanGuide onClose={() => setIsScanGuideOpen(false)} />
+      ) : null}
     </div>
   );
 }
