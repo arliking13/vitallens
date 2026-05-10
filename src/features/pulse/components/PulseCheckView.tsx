@@ -134,39 +134,103 @@ const signalQualityRowTones = {
 } as const;
 
 function getScannerTitle({
+  fingerGateState,
   hasPulseEstimate,
   isPulseCheckActive,
+  isSampling,
+  status,
 }: {
+  fingerGateState: keyof typeof fingerGateLabels;
   hasPulseEstimate: boolean;
   isPulseCheckActive: boolean;
+  isSampling: boolean;
+  status: CameraStatus;
 }) {
   if (hasPulseEstimate) {
     return "Estimate ready";
   }
 
-  if (isPulseCheckActive) {
-    return "Scanning pulse";
+  if (status === "requesting") {
+    return "Opening sensor";
   }
 
-  return "Place finger over sensor";
+  if (status === "denied") {
+    return "Camera permission needed";
+  }
+
+  if (status === "error") {
+    return "Camera unavailable";
+  }
+
+  if (!isPulseCheckActive || !isSampling) {
+    return "Place finger over sensor";
+  }
+
+  if (fingerGateState === "recording") {
+    return "Recording clean signal";
+  }
+
+  if (fingerGateState === "stabilizing") {
+    return "Hold steady";
+  }
+
+  if (fingerGateState === "finger-lost") {
+    return "Hold steady again";
+  }
+
+  return "Place finger over camera";
 }
 
 function getScannerDetail({
+  cleanWindowDurationLabel,
+  fingerGateState,
   hasPulseEstimate,
   isPulseCheckActive,
+  isSampling,
+  status,
 }: {
+  cleanWindowDurationLabel: string | null;
+  fingerGateState: keyof typeof fingerGateLabels;
   hasPulseEstimate: boolean;
   isPulseCheckActive: boolean;
+  isSampling: boolean;
+  status: CameraStatus;
 }) {
   if (hasPulseEstimate) {
     return "You can continue or hold a little longer.";
   }
 
-  if (isPulseCheckActive) {
-    return "Hold still for a cleaner reading.";
+  if (status === "requesting") {
+    return "Keep this screen open while VitalLens prepares the rear camera.";
   }
 
-  return "Cover the rear camera.";
+  if (status === "denied") {
+    return "Allow camera access in Safari or browser settings to continue.";
+  }
+
+  if (status === "error") {
+    return "Try stopping and starting the camera again.";
+  }
+
+  if (!isPulseCheckActive || !isSampling) {
+    return "Cover the rear camera.";
+  }
+
+  if (fingerGateState === "recording") {
+    return cleanWindowDurationLabel
+      ? `Clean sample recording: ${cleanWindowDurationLabel}.`
+      : "Hold still while VitalLens records a clean sample.";
+  }
+
+  if (fingerGateState === "stabilizing") {
+    return "Keep your finger still while the signal settles.";
+  }
+
+  if (fingerGateState === "finger-lost") {
+    return "Place your finger back over the camera and hold steady again.";
+  }
+
+  return "Cover the rear camera fully with steady, gentle pressure.";
 }
 
 export function PulseCheckView({
@@ -234,13 +298,23 @@ export function PulseCheckView({
     : "Using current clean window";
   const showCameraPreview =
     previewPreference.enabled && previewPreference.stream === stream;
+  const currentSignalStats = describeSeries(
+    smoothedSignal.length > 0 ? smoothedSignal : liveSignal,
+  );
   const scannerTitle = getScannerTitle({
+    fingerGateState,
     hasPulseEstimate,
     isPulseCheckActive,
+    isSampling,
+    status,
   });
   const scannerDetail = getScannerDetail({
+    cleanWindowDurationLabel,
+    fingerGateState,
     hasPulseEstimate,
     isPulseCheckActive,
+    isSampling,
+    status,
   });
 
   useEffect(() => {
@@ -284,10 +358,6 @@ export function PulseCheckView({
       return null;
     }
 
-    const signalStats = describeSeries(
-      smoothedSignal.length > 0 ? smoothedSignal : liveSignal,
-    );
-
     return {
       bpm: pulseEstimate.bpm,
       confidence: pulseEstimate.confidence,
@@ -305,12 +375,12 @@ export function PulseCheckView({
         sampleDurationMs: roundTelemetryNumber(cleanWindowDurationMs),
         signal:
           liveSignal.length > 0 ? downsampleSeries(liveSignal) : undefined,
-        signalMax: signalStats?.max,
-        signalMean: signalStats?.mean,
-        signalMin: signalStats?.min,
+        signalMax: currentSignalStats?.max,
+        signalMean: currentSignalStats?.mean,
+        signalMin: currentSignalStats?.min,
         signalQuality,
-        signalRange: signalStats?.range,
-        signalStdDev: signalStats?.stdDev,
+        signalRange: currentSignalStats?.range,
+        signalStdDev: currentSignalStats?.stdDev,
         smoothedSignal:
           smoothedSignal.length > 0
             ? downsampleSeries(smoothedSignal)
@@ -519,6 +589,39 @@ export function PulseCheckView({
             label="Valid samples"
             tone="neutral"
             value={String(currentWindowValidSampleCount)}
+          />
+          <InfoRow
+            delayMs={130}
+            detail={`${currentWindowValidSampleCount} samples in the current clean window`}
+            label="Clean window"
+            tone={
+              cleanWindowDurationMs >= MIN_EXPORT_DURATION_MS
+                ? "brand"
+                : "neutral"
+            }
+            value={cleanWindowDurationLabel ?? "0s"}
+          />
+          <InfoRow
+            delayMs={135}
+            detail={`Confidence: ${pulseEstimate.confidence} / source: ${pulseEstimate.estimateSource}`}
+            label="Estimate"
+            tone={hasPulseEstimate ? "brand" : "neutral"}
+            value={pulseEstimate.bpm ? `${pulseEstimate.bpm} BPM` : "Waiting"}
+          />
+          <InfoRow
+            delayMs={138}
+            detail={
+              currentSignalStats
+                ? `Mean ${currentSignalStats.mean} / std dev ${currentSignalStats.stdDev}`
+                : "Waiting for enough clean signal samples."
+            }
+            label="Signal stats"
+            tone={currentSignalStats ? "pulse" : "neutral"}
+            value={
+              currentSignalStats
+                ? `Range ${currentSignalStats.range}`
+                : "No signal"
+            }
           />
           {showTorchStatus ? (
             <InfoRow
