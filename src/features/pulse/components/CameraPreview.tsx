@@ -264,46 +264,49 @@ export function CameraPreview({
       className="vl-scanner-card animate-card-in overflow-hidden p-2.5"
       style={animationStyle}
     >
-      <div className="flex items-center justify-between gap-3 px-2 pb-2.5">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="vl-glass-icon h-9 w-9" aria-hidden="true">
+      <div className="vl-scanner-header px-2 pb-2.5">
+        <div className="vl-scanner-header-main">
+          <span
+            className="vl-glass-icon vl-scanner-header-icon"
+            aria-hidden="true"
+          >
             <CameraIcon className="h-[1.125rem] w-[1.125rem]" />
           </span>
-          <div className="min-w-0">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <p className="text-sm font-bold text-[var(--vl-text)]">
-                Pulse scanner
-              </p>
-              {onOpenScanGuide ? (
-                <button
-                  aria-label="Open pulse scan guide"
-                  className="vl-glass-pill interactive-press min-h-7 px-2.5 text-[0.68rem] font-bold text-[var(--vl-text-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vl-peach)]"
-                  onClick={onOpenScanGuide}
-                  type="button"
-                >
-                  ? Guide
-                </button>
-              ) : null}
-            </div>
+          <div className="vl-scanner-title-stack">
+            <p className="truncate text-sm font-bold text-[var(--vl-text)]">
+              Pulse scanner
+            </p>
+            {onOpenScanGuide ? (
+              <button
+                aria-label="Open pulse scan guide"
+                className="vl-scan-guide-pill interactive-press focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vl-peach)]"
+                onClick={onOpenScanGuide}
+                type="button"
+              >
+                Scan guide
+              </button>
+            ) : null}
           </div>
         </div>
-        <span
-          className={[
-            "vl-state-pill",
-            `vl-state-pill-${scannerVisualState}`,
-          ].join(" ")}
-        >
-          {scannerVisualState === "ready" ? (
-            <CheckIcon className="h-3.5 w-3.5" />
-          ) : scannerVisualState === "scanning" ? (
-            <span className="vl-state-icon" aria-hidden="true">
-              <HeartIcon className="h-3.5 w-3.5" />
-            </span>
-          ) : (
-            <span className="vl-state-dot" aria-hidden="true" />
-          )}
-          <span>{getStatusPillLabel(scannerVisualState)}</span>
-        </span>
+        <div className="vl-scanner-status-slot">
+          <span
+            className={[
+              "vl-state-pill",
+              `vl-state-pill-${scannerVisualState}`,
+            ].join(" ")}
+          >
+            {scannerVisualState === "ready" ? (
+              <CheckIcon className="h-3.5 w-3.5" />
+            ) : scannerVisualState === "scanning" ? (
+              <span className="vl-state-icon" aria-hidden="true">
+                <HeartIcon className="h-3.5 w-3.5" />
+              </span>
+            ) : (
+              <span className="vl-state-dot" aria-hidden="true" />
+            )}
+            <span>{getStatusPillLabel(scannerVisualState)}</span>
+          </span>
+        </div>
       </div>
 
       <div className="relative overflow-hidden rounded-[26px] border border-white/70 bg-white/45 px-3 pb-3 pt-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.88),inset_0_-1px_0_rgba(7,27,58,0.04)]">
