@@ -313,17 +313,7 @@ export function PulseCheckView({
         </p>
       </div>
 
-      <div className="mt-5">
-        <div className="mb-3 flex justify-end">
-          <button
-            className="vl-scan-guide-pill interactive-press"
-            onClick={() => setIsScanGuideOpen(true)}
-            type="button"
-          >
-            Scan guide
-          </button>
-        </div>
-
+      <div className="mt-5 grid">
         <CameraPreview
           delayMs={40}
           fingerGateState={fingerGateState}
@@ -338,6 +328,15 @@ export function PulseCheckView({
           stream={stream}
           videoRef={videoRef}
         />
+        <div className="pointer-events-none col-start-1 row-start-1 flex h-16 items-start justify-end px-4 pr-[7.35rem] pt-3">
+          <button
+            className="vl-scan-guide-pill interactive-press pointer-events-auto shrink-0"
+            onClick={() => setIsScanGuideOpen(true)}
+            type="button"
+          >
+            Scan guide
+          </button>
+        </div>
       </div>
 
       {hasPulseEstimate ? (
