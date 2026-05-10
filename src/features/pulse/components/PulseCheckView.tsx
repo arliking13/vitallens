@@ -85,58 +85,41 @@ const signalQualityRowTones = {
 function getScannerTitle({
   hasPulseEstimate,
   isSampling,
-  signalQuality,
-  fingerGateState,
 }: {
   hasPulseEstimate: boolean;
   isSampling: boolean;
-  signalQuality: keyof typeof signalQualityLabels;
-  fingerGateState: keyof typeof fingerGateLabels;
+  signalQuality?: keyof typeof signalQualityLabels;
+  fingerGateState?: keyof typeof fingerGateLabels;
 }) {
   if (hasPulseEstimate) {
     return "Estimate ready";
   }
 
-  if (!isSampling) {
-    return "Place finger over sensor";
+  if (isSampling) {
+    return "Scanning pulse";
   }
 
-  if (
-    fingerGateState === "finger-lost" ||
-    signalQuality === "unstable" ||
-    signalQuality === "too-dark" ||
-    signalQuality === "too-bright"
-  ) {
-    return "Need cleaner signal";
-  }
-
-  return "Reading in progress";
+  return "Place finger over sensor";
 }
 
 function getScannerDetail({
   hasPulseEstimate,
   isSampling,
-  pulseMessage,
-  scannerTitle,
 }: {
   hasPulseEstimate: boolean;
   isSampling: boolean;
-  pulseMessage: string;
-  scannerTitle: string;
+  pulseMessage?: string;
+  scannerTitle?: string;
 }) {
   if (hasPulseEstimate) {
-    return "You can continue or hold a little longer for another clean window.";
+    return "You can continue or hold a little longer.";
   }
 
-  if (!isSampling) {
-    return "Start the check, cover the rear camera, and keep your finger still.";
+  if (isSampling) {
+    return "Hold still for about 20 seconds.";
   }
 
-  if (scannerTitle === "Need cleaner signal") {
-    return pulseMessage;
-  }
-
-  return "Stay still for the most accurate result.";
+  return "Cover the rear camera gently.";
 }
 
 export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
@@ -357,14 +340,10 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         ) : (
           <div>
             <p className="text-lg font-bold text-[var(--vl-text)]">
-              {scannerTitle === "Need cleaner signal"
-                ? "Need cleaner signal"
-                : "Keep holding steady"}
+              Keep holding steady
             </p>
             <p className="mt-2 text-sm leading-6 text-[var(--vl-text-muted)]">
-              {scannerTitle === "Need cleaner signal"
-                ? pulseEstimate.message
-                : "About 20 seconds gives a cleaner estimate."}
+              About 20 seconds gives a cleaner estimate.
             </p>
           </div>
         )}
@@ -446,17 +425,22 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         </div>
       </details>
 
-      <div className="sticky bottom-0 z-20 -mx-5 mt-auto border-t border-[var(--vl-glass-border)] bg-[rgba(250,247,242,0.78)] px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 backdrop-blur-xl">
-        <div className="space-y-3">
+      <div className="pointer-events-none sticky bottom-0 z-20 -mx-5 mt-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-5">
+        <div className="vl-action-dock pointer-events-auto space-y-3 p-3">
           <Button className="w-full" onClick={handlePulseCheckButtonClick}>
             {isCheckActive ? "Stop check" : "Start pulse check"}
           </Button>
-          <div className="grid grid-cols-2 gap-3">
-            <Button className="w-full" onClick={onBack} variant="ghost">
+          <div className="grid grid-cols-[0.9fr_1.1fr] gap-3">
+            <Button
+              className="vl-dock-back min-h-12 w-full text-sm"
+              onClick={onBack}
+              variant="ghost"
+            >
               Back
             </Button>
             <Button
-              className="w-full"
+              className="vl-dock-continue min-h-12 w-full text-sm"
+              disabled={!hasPulseEstimate}
               onClick={onNext}
               variant={hasPulseEstimate ? "primary" : "secondary"}
             >

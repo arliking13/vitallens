@@ -172,11 +172,9 @@ function getActiveInstruction({
 }
 
 function getScannerCoreState({
-  fingerGateState,
   isSampling,
   title,
 }: {
-  fingerGateState?: FingerGateState;
   isSampling: boolean;
   title: string;
 }): ScannerCoreState {
@@ -184,10 +182,7 @@ function getScannerCoreState({
     return "ready";
   }
 
-  if (
-    isSampling &&
-    (fingerGateState === "stabilizing" || fingerGateState === "recording")
-  ) {
+  if (isSampling) {
     return "scanning";
   }
 
@@ -252,11 +247,7 @@ export function CameraPreview({
   const title = scannerTitle ?? copy.title;
   const detail = scannerDetail ?? copy.detail;
   const label = scannerLabel ?? (hasStream ? copy.label : emptyStateCopy[status]);
-  const scannerCoreState = getScannerCoreState({
-    fingerGateState,
-    isSampling,
-    title,
-  });
+  const scannerCoreState = getScannerCoreState({ isSampling, title });
   const ScannerCoreIcon =
     scannerCoreState === "ready"
       ? CheckIcon
@@ -283,10 +274,10 @@ export function CameraPreview({
 
   return (
     <div
-      className="vl-scanner-card animate-card-in overflow-hidden p-3"
+      className="vl-scanner-card animate-card-in overflow-hidden p-2.5"
       style={animationStyle}
     >
-      <div className="flex items-center justify-between gap-3 px-2 pb-3">
+      <div className="flex items-center justify-between gap-3 px-2 pb-2.5">
         <div className="flex min-w-0 items-center gap-3">
           <span className="vl-glass-icon h-10 w-10" aria-hidden="true">
             <CameraIcon className="h-5 w-5" />
@@ -305,7 +296,7 @@ export function CameraPreview({
         </span>
       </div>
 
-      <div className="relative overflow-hidden rounded-[28px] border border-white/80 bg-white/60 px-4 pb-4 pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),inset_0_-1px_0_rgba(7,27,58,0.05)]">
+      <div className="relative overflow-hidden rounded-[26px] border border-white/70 bg-white/45 px-3 pb-3 pt-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.88),inset_0_-1px_0_rgba(7,27,58,0.04)]">
         <video
           aria-hidden={!shouldShowRawPreview}
           aria-label={
@@ -332,7 +323,12 @@ export function CameraPreview({
           ].join(" ")}
         >
           <div
-            className="scanner-glow absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(244,124,98,0.14)] blur-2xl"
+            className={[
+              scannerCoreState === "scanning" ? "scanner-glow" : "",
+              "absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(244,124,98,0.12)] blur-2xl",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             aria-hidden="true"
           />
           <div
@@ -340,7 +336,7 @@ export function CameraPreview({
             aria-hidden="true"
           />
           <div className="relative">
-            <div className="mb-4 grid grid-cols-3 gap-2">
+            <div className="mb-3 grid grid-cols-3 gap-2">
               {instructionItems.map((item) => {
                 const isActive = item.id === activeInstruction;
                 const Icon = item.icon;
@@ -348,7 +344,7 @@ export function CameraPreview({
                 return (
                   <div
                     className={[
-                      "vl-instruction-card px-2.5 py-3 text-center",
+                      "vl-instruction-card px-2 py-2.5 text-center",
                       isActive ? "vl-instruction-card-active" : "",
                     ]
                       .filter(Boolean)
@@ -356,12 +352,12 @@ export function CameraPreview({
                     key={item.id}
                   >
                     <span
-                      className="vl-glass-icon mx-auto h-10 w-10"
+                      className="vl-glass-icon mx-auto h-8 w-8"
                       aria-hidden="true"
                     >
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-[1.125rem] w-[1.125rem]" />
                     </span>
-                    <p className="mt-2 text-[0.72rem] font-bold text-[var(--vl-text)]">
+                    <p className="mt-1.5 text-[0.7rem] font-bold text-[var(--vl-text)]">
                       {item.title}
                     </p>
                     <p className="mt-1 text-[0.68rem] leading-4 text-[var(--vl-text-muted)]">
@@ -383,21 +379,21 @@ export function CameraPreview({
             >
               <ScannerCoreIcon
                 className={[
-                  scannerCoreState === "scanning" ? "vl-heart-beat" : "",
-                  scannerCoreState === "idle" ? "h-7 w-7" : "h-8 w-8",
+                  scannerCoreState === "scanning" ? "vl-heartbeat" : "",
+                  scannerCoreState === "idle" ? "h-6 w-6" : "h-7 w-7",
                 ]
                   .filter(Boolean)
                   .join(" ")}
               />
             </div>
-            <p className="mt-4 text-base font-bold text-[var(--vl-text)]">
+            <p className="mt-3 text-base font-bold text-[var(--vl-text)]">
               {title}
             </p>
-            <p className="mx-auto mt-2 max-w-64 text-sm leading-6 text-[var(--vl-text-muted)]">
+            <p className="mx-auto mt-1.5 max-w-56 text-sm leading-5 text-[var(--vl-text-muted)]">
               {detail}
             </p>
             <div
-              className="signal-preview signal-pulse vl-glass relative mt-4 h-16 overflow-hidden rounded-[20px]"
+              className="signal-preview signal-pulse vl-glass relative mt-3 h-14 overflow-hidden rounded-[20px]"
               aria-hidden="true"
             >
               <div className="signal-glow absolute left-1/2 top-2 h-12 w-24 -translate-x-1/2 rounded-full bg-[rgba(244,124,98,0.12)] blur-2xl" />
