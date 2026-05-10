@@ -49,6 +49,10 @@ const samplingStatusLabels = {
 
 const MIN_EXPORT_DURATION_MS = 5000;
 
+function formatCleanWindowDuration(durationMs: number) {
+  return `${Math.round(durationMs / 1000)}s`;
+}
+
 const fingerGateLabels = {
   "waiting-for-finger": "Place finger over camera",
   stabilizing: "Hold steady",
@@ -167,6 +171,10 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
     fingerGateState === "finger-lost"
       ? "Finger moved"
       : fingerGateLabels[fingerGateState];
+  const cleanWindowDurationLabel =
+    cleanWindowDurationMs > 0
+      ? formatCleanWindowDuration(cleanWindowDurationMs)
+      : null;
   const estimateStateNote = pulseEstimate.usedLastCleanWindow
     ? "Using last clean window"
     : "Using current clean window";
@@ -305,7 +313,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
                         : "vl-peach-pill",
                     ].join(" ")}
                   >
-                    Estimate confidence: {pulseEstimate.confidence}
+                    Confidence: {pulseEstimate.confidence}
                   </span>
                 </div>
                 <div className="mt-2 flex items-end gap-2">
@@ -316,17 +324,24 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
                     BPM
                   </span>
                 </div>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  <span className="vl-peach-pill px-3 py-1 text-xs font-bold">
+                    Signal: Clean
+                  </span>
+                  {cleanWindowDurationLabel ? (
+                    <span className="vl-glass-pill px-3 py-1 text-xs font-bold text-[var(--vl-text-muted)]">
+                      Window: {cleanWindowDurationLabel}
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
-            <p className="mt-3 text-sm leading-6 text-[var(--vl-text-muted)]">
-              Non-medical wellness estimate.
-            </p>
-            {fingerGateState === "finger-lost" &&
-            pulseEstimate.usedLastCleanWindow ? (
-              <p className="mt-2 text-sm leading-6 text-[var(--vl-text-muted)]">
-                Estimate based on last clean window.
+            <div className="mt-3 space-y-1 text-sm leading-5 text-[var(--vl-text-muted)]">
+              <p>Based on your best clean finger-camera signal.</p>
+              <p>
+                Wellness-only estimate. Not for medical decisions.
               </p>
-            ) : null}
+            </div>
           </div>
         </section>
       ) : null}
