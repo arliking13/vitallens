@@ -53,7 +53,8 @@ const scannerCopy: Record<
     title: "Opening sensor",
   },
   ready: {
-    detail: "Rest your finger over the rear camera to begin reading the signal.",
+    detail:
+      "Rest your finger over the rear camera to begin reading the signal.",
     label: "Ready",
     title: "Pulse scanner",
   },
@@ -362,19 +363,25 @@ export function CameraPreview({
               className={[
                 "vl-scanner-core",
                 `vl-scanner-core-${scannerVisualState}`,
-                scannerVisualState === "scanning" ? "vl-heartbeat-core" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
+              ].join(" ")}
               aria-hidden="true"
+              data-state={scannerVisualState}
             >
-              {scannerVisualState === "ready" ? (
-                <CheckIcon className="h-7 w-7" />
-              ) : scannerVisualState === "scanning" ? (
-                <HeartIcon className="h-7 w-7" />
-              ) : (
-                <FingerTapIcon className="h-6 w-6" />
-              )}
+              <span
+                className={
+                  scannerVisualState === "scanning"
+                    ? "vl-heartbeat-target is-beating"
+                    : "vl-heartbeat-target"
+                }
+              >
+                {scannerVisualState === "ready" ? (
+                  <CheckIcon className="h-7 w-7" />
+                ) : scannerVisualState === "scanning" ? (
+                  <HeartIcon className="h-7 w-7" />
+                ) : (
+                  <FingerTapIcon className="h-6 w-6" />
+                )}
+              </span>
             </span>
             <p className="mt-2.5 text-base font-bold text-[var(--vl-text)]">
               {title}
