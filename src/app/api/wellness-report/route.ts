@@ -127,22 +127,6 @@ function truncateForServerLog(value: string) {
     : value;
 }
 
-function logWatsonxError({
-  envStatus,
-  responseText,
-  status,
-}: {
-  envStatus: WatsonxEnvStatus;
-  responseText: string;
-  status: number;
-}) {
-  console.error("[wellness-report] IBM watsonx text/generation failed", {
-    env: envStatus,
-    responseText: truncateForServerLog(responseText),
-    status,
-  });
-}
-
 async function getIamAccessToken(apiKey: string) {
   const response = await fetch("https://iam.cloud.ibm.com/identity/token", {
     body: new URLSearchParams({
@@ -315,18 +299,22 @@ export async function POST(request: Request) {
         method: "POST",
       },
     );
-    const responseText = await response.text();
 
     if (!response.ok) {
-      logWatsonxError({
-        envStatus: config.envStatus,
-        responseText,
+      const errorText = await response.text();
+
+      console.error("[wellness-report] IBM watsonx text/generation failed", {
+        body: errorText,
         status: response.status,
+        statusText: response.statusText,
       });
 
-      throw new Error("IBM watsonx request failed.");
+      throw new Error(
+        `IBM watsonx request failed: ${response.status} ${response.statusText}`,
+      );
     }
 
+    const responseText = await response.text();
     const watsonxResponse = JSON.parse(responseText) as WatsonxChatResponse;
     const generatedText = extractGeneratedText(watsonxResponse);
 
@@ -337,8 +325,17 @@ export async function POST(request: Request) {
     return Response.json(parseSummary(generatedText));
   } catch (error) {
     console.error("[wellness-report] Returning fallback summary", {
-      env: config.envStatus,
-      message: error instanceof Error ? error.message : "Unknown IBM error.",
+      env: {
+        hasApiKey: Boolean(config?.apiKey),
+        hasEndpoint: Boolean(config?.endpoint),
+        hasModelId: Boolean(config?.modelId),
+        hasProjectId: Boolean(config?.projectId),
+        hasVersionOverride: Boolean(process.env.IBM_WATSONX_VERSION),
+        usingDefaultModelId:
+          !process.env.IBM_WATSONX_MODEL_ID &&
+          !process.env.WATSONX_MODEL_ID,
+      },
+      message: error instanceof Error ? error.message : "Unknown IBM error",
     });
 
     return Response.json(fallbackSummary);
