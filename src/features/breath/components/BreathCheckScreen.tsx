@@ -7,6 +7,8 @@ import { Card } from "@/shared/components/Card";
 import { ScreenHeader } from "@/shared/components/ScreenHeader";
 import type { BreathMotionResult } from "@/shared/types/check-flow";
 
+import { BreathScanGuide } from "./BreathScanGuide";
+
 type BreathCheckScreenProps = {
   onBack: () => void;
   onNext: () => void;
@@ -613,6 +615,7 @@ export function BreathCheckScreen({
     useState<ContactCheckState>("idle");
   const [placementElapsedSeconds, setPlacementElapsedSeconds] = useState(0);
   const [result, setResult] = useState<BreathMotionResult | null>(null);
+  const [isBreathGuideOpen, setIsBreathGuideOpen] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const contactCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1220,10 +1223,20 @@ export function BreathCheckScreen({
         padding="sm"
       >
         <div className="flex items-center justify-between gap-3 px-1 pb-4">
-          <div>
-            <p className="text-sm font-bold text-[var(--vl-text)]">
-              Phone motion check
-            </p>
+          <div className="min-w-0">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <p className="text-sm font-bold text-[var(--vl-text)]">
+                Phone motion check
+              </p>
+              <button
+                aria-label="Open breath guide"
+                className="vl-scan-guide-pill interactive-press focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vl-peach)]"
+                onClick={() => setIsBreathGuideOpen(true)}
+                type="button"
+              >
+                Breath guide
+              </button>
+            </div>
             <p className="mt-1 text-sm leading-5 text-[var(--vl-text-muted)]">
               Guided by voice. Measured from small phone movements.
             </p>
@@ -1358,6 +1371,10 @@ export function BreathCheckScreen({
           </div>
         </div>
       </div>
+
+      {isBreathGuideOpen ? (
+        <BreathScanGuide onClose={() => setIsBreathGuideOpen(false)} />
+      ) : null}
     </div>
   );
 }
