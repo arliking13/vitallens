@@ -876,3 +876,24 @@ button {
   animation: none;
   }
 }
+
+.vl-heartbeat-target.is-beating {
+  animation: vl-heartbeat-debug-pulse 0.45s linear infinite !important;
+  outline: 3px solid red !important;
+  background: rgba(255, 0, 0, 0.18) !important;
+  border-radius: 999px !important;
+}
+
+@keyframes vl-heartbeat-debug-pulse {
+  0% {
+    transform: translate3d(0, 0, 0) scale3d(1, 1, 1) rotate(0deg);
+  }
+
+  50% {
+    transform: translate3d(0, 0, 0) scale3d(1.8, 1.8, 1) rotate(8deg);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0) scale3d(1, 1, 1) rotate(0deg);
+  }
+}
