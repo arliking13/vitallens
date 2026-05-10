@@ -56,6 +56,51 @@ function formatCleanWindowDuration(durationMs: number) {
   return `${Math.round(durationMs / 1000)}s`;
 }
 
+function roundTelemetryNumber(value: number) {
+  return Number(value.toFixed(3));
+}
+
+function downsampleSeries(values: number[], maxPoints = 120) {
+  const finiteValues = values.filter(Number.isFinite);
+
+  if (finiteValues.length <= maxPoints) {
+    return finiteValues.map(roundTelemetryNumber);
+  }
+
+  const step = (finiteValues.length - 1) / (maxPoints - 1);
+
+  return Array.from({ length: maxPoints }, (_, index) =>
+    roundTelemetryNumber(
+      finiteValues[Math.round(index * step)] ?? finiteValues.at(-1) ?? 0,
+    ),
+  );
+}
+
+function describeSeries(values: number[]) {
+  const finiteValues = values.filter(Number.isFinite);
+
+  if (finiteValues.length === 0) {
+    return null;
+  }
+
+  const min = Math.min(...finiteValues);
+  const max = Math.max(...finiteValues);
+  const mean =
+    finiteValues.reduce((sum, value) => sum + value, 0) / finiteValues.length;
+  const variance =
+    finiteValues.reduce((sum, value) => sum + (value - mean) ** 2, 0) /
+    finiteValues.length;
+  const stdDev = Math.sqrt(variance);
+
+  return {
+    max: roundTelemetryNumber(max),
+    mean: roundTelemetryNumber(mean),
+    min: roundTelemetryNumber(min),
+    range: roundTelemetryNumber(max - min),
+    stdDev: roundTelemetryNumber(stdDev),
+  };
+}
+
 const fingerGateLabels = {
   "waiting-for-finger": "Place finger over camera",
   stabilizing: "Hold steady",
@@ -148,6 +193,7 @@ export function PulseCheckView({
     fingerGateState,
     error: samplingError,
     lastFingerLostAt,
+    liveSignal,
     pulseEstimate,
     qualityMessage,
     recordingStartedAt,
@@ -238,6 +284,10 @@ export function PulseCheckView({
       return null;
     }
 
+    const signalStats = describeSeries(
+      smoothedSignal.length > 0 ? smoothedSignal : liveSignal,
+    );
+
     return {
       bpm: pulseEstimate.bpm,
       confidence: pulseEstimate.confidence,
@@ -247,6 +297,25 @@ export function PulseCheckView({
           : null,
       signalLabel: "Clean",
       source: "Finger-camera signal",
+      telemetry: {
+        cleanWindowDurationMs: roundTelemetryNumber(cleanWindowDurationMs),
+        confidence: pulseEstimate.confidence,
+        estimatedBpm: pulseEstimate.bpm,
+        sampleCount: samples.length,
+        sampleDurationMs: roundTelemetryNumber(cleanWindowDurationMs),
+        signal:
+          liveSignal.length > 0 ? downsampleSeries(liveSignal) : undefined,
+        signalMax: signalStats?.max,
+        signalMean: signalStats?.mean,
+        signalMin: signalStats?.min,
+        signalQuality,
+        signalRange: signalStats?.range,
+        signalStdDev: signalStats?.stdDev,
+        smoothedSignal:
+          smoothedSignal.length > 0
+            ? downsampleSeries(smoothedSignal)
+            : undefined,
+      },
     };
   }
 

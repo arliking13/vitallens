@@ -106,6 +106,45 @@ function getRange(values: number[]) {
   return Math.max(...values) - Math.min(...values);
 }
 
+function roundTelemetryNumber(value: number) {
+  return Number(value.toFixed(3));
+}
+
+function downsampleSeries(values: number[], maxPoints = 120) {
+  const finiteValues = values.filter(Number.isFinite);
+
+  if (finiteValues.length <= maxPoints) {
+    return finiteValues.map(roundTelemetryNumber);
+  }
+
+  const step = (finiteValues.length - 1) / (maxPoints - 1);
+
+  return Array.from({ length: maxPoints }, (_, index) =>
+    roundTelemetryNumber(
+      finiteValues[Math.round(index * step)] ?? finiteValues.at(-1) ?? 0,
+    ),
+  );
+}
+
+function describeSeries(values: number[]) {
+  const finiteValues = values.filter(Number.isFinite);
+
+  if (finiteValues.length === 0) {
+    return null;
+  }
+
+  const min = Math.min(...finiteValues);
+  const max = Math.max(...finiteValues);
+
+  return {
+    max: roundTelemetryNumber(max),
+    mean: roundTelemetryNumber(average(finiteValues)),
+    min: roundTelemetryNumber(min),
+    range: roundTelemetryNumber(max - min),
+    stdDev: roundTelemetryNumber(standardDeviation(finiteValues)),
+  };
+}
+
 function getMotionMagnitude(event: DeviceMotionEvent) {
   const acceleration = event.accelerationIncludingGravity ?? event.acceleration;
 
@@ -454,6 +493,29 @@ function analyzeBreathMotion(
     qualityLabel,
     rhythmLabel,
     sampleCount,
+  };
+}
+
+function buildBreathTelemetry(
+  samples: BreathMotionSample[],
+  durationMs: number,
+  result: BreathMotionResult,
+) {
+  const motionValues = samples.map((sample) => sample.value);
+  const motionStats = describeSeries(motionValues);
+
+  return {
+    motionMagnitude:
+      motionValues.length > 0 ? downsampleSeries(motionValues) : undefined,
+    motionMax: motionStats?.max,
+    motionMean: motionStats?.mean,
+    motionMin: motionStats?.min,
+    motionRange: motionStats?.range,
+    motionStdDev: motionStats?.stdDev,
+    quality: result.qualityLabel,
+    rhythm: result.rhythmLabel,
+    sampleCount: samples.length,
+    sampleDurationMs: roundTelemetryNumber(durationMs),
   };
 }
 
@@ -924,7 +986,15 @@ export function BreathCheckScreen({
       startedAt === null
         ? 0
         : Math.min(RECORDING_DURATION_MS, performance.now() - startedAt);
-    const nextResult = analyzeBreathMotion(samplesRef.current, durationMs);
+    const analyzedResult = analyzeBreathMotion(samplesRef.current, durationMs);
+    const nextResult: BreathMotionResult = {
+      ...analyzedResult,
+      telemetry: buildBreathTelemetry(
+        samplesRef.current,
+        durationMs,
+        analyzedResult,
+      ),
+    };
     const nextSignal = buildPreviewSignal(
       uiTraceSamplesRef.current.length > 0
         ? uiTraceSamplesRef.current

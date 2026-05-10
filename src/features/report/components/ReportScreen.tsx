@@ -27,7 +27,8 @@ const unavailableSummary: WellnessSummaryResponse = {
     "Use the local results as a wellness snapshot and repeat the check later if needed.",
   observations: [
     "Pulse and breath results are still shown locally.",
-    "You can regenerate the summary after the service is available.",
+    "The AI summary can be regenerated after the service is available.",
+    "The local results remain a wellness-only snapshot.",
   ],
   source: "fallback",
   summary:
@@ -53,6 +54,7 @@ function buildReportInput({
           rhythmLabel: breathResult.rhythmLabel,
           sampleSeconds: breathResult.durationSeconds,
           source: "Phone motion",
+          telemetry: breathResult.telemetry,
         }
       : null,
     pulse: pulseResult
@@ -62,6 +64,7 @@ function buildReportInput({
           sampleSeconds: pulseResult.sampleSeconds,
           signalLabel: pulseResult.signalLabel,
           source: pulseResult.source,
+          telemetry: pulseResult.telemetry,
         }
       : null,
   };

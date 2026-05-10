@@ -10,6 +10,7 @@ const DEFAULT_WATSONX_MODEL_ID =
   "mistralai/mistral-small-3-1-24b-instruct-2503";
 const WATSONX_MAX_NEW_TOKENS = 120;
 const WATSONX_ERROR_LOG_LIMIT = 2000;
+const TELEMETRY_MAX_POINTS = 120;
 const IBM_PROJECT_ID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UUID_PREFIX_PATTERN = /^[0-9a-f]{8}-/i;
@@ -18,7 +19,8 @@ const fallbackSummary: WellnessSummaryResponse = {
     "Use the local results as a wellness snapshot and repeat the check later if needed.",
   observations: [
     "Pulse and breath results are still shown locally.",
-    "You can regenerate the summary after the service is available.",
+    "The AI summary can be regenerated after the service is available.",
+    "The local results remain a wellness-only snapshot.",
   ],
   source: "fallback",
   summary:
@@ -145,6 +147,89 @@ function truncateForServerLog(value: string) {
     : value;
 }
 
+function roundTelemetryNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Number(value.toFixed(3))
+    : undefined;
+}
+
+function compactTelemetrySeries(values: unknown) {
+  if (!Array.isArray(values)) {
+    return undefined;
+  }
+
+  const finiteValues = values.filter(
+    (value): value is number => typeof value === "number" && Number.isFinite(value),
+  );
+
+  if (finiteValues.length === 0) {
+    return undefined;
+  }
+
+  if (finiteValues.length <= TELEMETRY_MAX_POINTS) {
+    return finiteValues.map((value) => Number(value.toFixed(3)));
+  }
+
+  const step = (finiteValues.length - 1) / (TELEMETRY_MAX_POINTS - 1);
+
+  return Array.from({ length: TELEMETRY_MAX_POINTS }, (_, index) =>
+    Number(
+      (finiteValues[Math.round(index * step)] ?? finiteValues.at(-1) ?? 0)
+        .toFixed(3),
+    ),
+  );
+}
+
+function compactPulseTelemetry(
+  telemetry: NonNullable<WellnessReportInput["pulse"]>["telemetry"],
+) {
+  if (!telemetry) {
+    return undefined;
+  }
+
+  return {
+    cleanWindowDurationMs: roundTelemetryNumber(
+      telemetry.cleanWindowDurationMs,
+    ),
+    confidence: telemetry.confidence,
+    estimatedBpm: roundTelemetryNumber(telemetry.estimatedBpm),
+    sampleCount: roundTelemetryNumber(telemetry.sampleCount),
+    sampleDurationMs: roundTelemetryNumber(telemetry.sampleDurationMs),
+    signal: compactTelemetrySeries(telemetry.signal),
+    signalMax: roundTelemetryNumber(telemetry.signalMax),
+    signalMean: roundTelemetryNumber(telemetry.signalMean),
+    signalMin: roundTelemetryNumber(telemetry.signalMin),
+    signalQuality: telemetry.signalQuality,
+    signalRange: roundTelemetryNumber(telemetry.signalRange),
+    signalStdDev: roundTelemetryNumber(telemetry.signalStdDev),
+    smoothedSignal: compactTelemetrySeries(telemetry.smoothedSignal),
+  };
+}
+
+function compactBreathTelemetry(
+  telemetry: NonNullable<WellnessReportInput["breath"]>["telemetry"],
+) {
+  if (!telemetry) {
+    return undefined;
+  }
+
+  return {
+    motionMagnitude: compactTelemetrySeries(telemetry.motionMagnitude),
+    motionMax: roundTelemetryNumber(telemetry.motionMax),
+    motionMean: roundTelemetryNumber(telemetry.motionMean),
+    motionMin: roundTelemetryNumber(telemetry.motionMin),
+    motionRange: roundTelemetryNumber(telemetry.motionRange),
+    motionStdDev: roundTelemetryNumber(telemetry.motionStdDev),
+    motionX: compactTelemetrySeries(telemetry.motionX),
+    motionY: compactTelemetrySeries(telemetry.motionY),
+    motionZ: compactTelemetrySeries(telemetry.motionZ),
+    quality: telemetry.quality,
+    rhythm: telemetry.rhythm,
+    sampleCount: roundTelemetryNumber(telemetry.sampleCount),
+    sampleDurationMs: roundTelemetryNumber(telemetry.sampleDurationMs),
+  };
+}
+
 async function getIamAccessToken(apiKey: string) {
   const response = await fetch("https://iam.cloud.ibm.com/identity/token", {
     body: new URLSearchParams({
@@ -185,6 +270,7 @@ function buildCompactReportInput(reportInput: WellnessReportInput) {
           rhythmLabel: reportInput.breath.rhythmLabel,
           sampleSeconds: reportInput.breath.sampleSeconds,
           source: reportInput.breath.source,
+          telemetry: compactBreathTelemetry(reportInput.breath.telemetry),
         }
       : null,
     pulse: reportInput.pulse
@@ -194,6 +280,7 @@ function buildCompactReportInput(reportInput: WellnessReportInput) {
           sampleSeconds: reportInput.pulse.sampleSeconds,
           signalLabel: reportInput.pulse.signalLabel,
           source: reportInput.pulse.source,
+          telemetry: compactPulseTelemetry(reportInput.pulse.telemetry),
         }
       : null,
   };
@@ -203,12 +290,14 @@ function buildPrompt(reportInput: WellnessReportInput) {
   const compactReportInput = buildCompactReportInput(reportInput);
 
   return [
-    "Write a concise clinical-style wellness report for VitalLens using only this structured phone-sensor data.",
+    "Write a concise clinical-style wellness report for VitalLens using only this structured phone-sensor data and compact telemetry.",
     "VitalLens is not a medical device. Do not diagnose, advise treatment, claim clinical accuracy, mention medical conditions, or use normal/abnormal/healthy/risk/disease.",
+    "Use the telemetry patterns and stats to interpret reliability, consistency, and session quality. Do not simply repeat the final labels or values.",
+    "Comment on pulse signal reliability, breath motion consistency, whether this session is usable as a wellness snapshot, what may have reduced confidence, and one practical way to repeat the check more cleanly.",
     "Return JSON only with keys summary, observations, nextStep.",
-    "summary: exactly 2 short sentences. Mention phone-based wellness snapshot and not a medical reading/decision.",
-    "observations: exactly 3 strings labelled Pulse:, Breathing:, Signal quality:. Include actual values when present: BPM, pulse confidence, pulse sample seconds, pulse signal, breath motion, rhythm, breath quality, breath sample seconds.",
-    "nextStep: one practical next step. Do not say Continue monitoring as needed.",
+    "summary: exactly 2 short sentences interpreting the quality of this phone-based wellness snapshot.",
+    "observations: exactly 3 strings labelled Pulse signal:, Breath motion:, Session quality:. Keep each observation short and confidence-aware.",
+    "nextStep: exactly 1 sentence with one specific practical suggestion for a cleaner repeat check. Do not say Continue monitoring as needed.",
     `Data: ${JSON.stringify(compactReportInput)}`,
   ].join("\n");
 }
@@ -249,19 +338,21 @@ function parseSummary(generatedText: string): WellnessSummaryResponse {
       ? generatedText.slice(jsonStart, jsonEnd + 1)
       : generatedText;
   const parsed = JSON.parse(jsonText) as Partial<WellnessSummaryResponse>;
+  const parsedObservations = Array.isArray(parsed.observations)
+    ? parsed.observations.filter(
+        (observation): observation is string =>
+          typeof observation === "string" && observation.length > 0,
+      )
+    : [];
+  const observations = [...parsedObservations, ...fallbackSummary.observations]
+    .slice(0, 3);
 
   return {
     nextStep:
       typeof parsed.nextStep === "string" && parsed.nextStep
         ? parsed.nextStep
         : fallbackSummary.nextStep,
-    observations: Array.isArray(parsed.observations)
-      ? parsed.observations
-          .filter((observation): observation is string =>
-            typeof observation === "string",
-          )
-          .slice(0, 3)
-      : fallbackSummary.observations,
+    observations,
     source: "ibm-watsonx",
     summary:
       typeof parsed.summary === "string" && parsed.summary
