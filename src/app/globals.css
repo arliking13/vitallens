@@ -142,6 +142,111 @@ button {
     inset 0 -1px 0 rgba(7, 27, 58, 0.06);
 }
 
+.vl-scanner-core {
+  -webkit-backdrop-filter: blur(18px) saturate(1.55);
+  align-items: center;
+  backdrop-filter: blur(18px) saturate(1.55);
+  background:
+    radial-gradient(circle at 44% 24%, rgba(255, 255, 255, 0.92), transparent 36%),
+    linear-gradient(180deg, rgba(255, 246, 243, 0.9), rgba(253, 224, 216, 0.68));
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  border-radius: var(--vl-radius-pill);
+  box-shadow:
+    0 16px 34px rgba(7, 27, 58, 0.08),
+    0 10px 24px rgba(244, 124, 98, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    inset 0 -10px 24px rgba(244, 124, 98, 0.08);
+  color: var(--vl-peach-strong);
+  display: grid;
+  height: 5rem;
+  isolation: isolate;
+  justify-items: center;
+  margin-inline: auto;
+  position: relative;
+  transition:
+    background 220ms ease,
+    box-shadow 220ms ease,
+    color 220ms ease,
+    transform 220ms ease;
+  width: 5rem;
+}
+
+.vl-scanner-core::before,
+.vl-scanner-core::after {
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+  position: absolute;
+}
+
+.vl-scanner-core::before {
+  border: 1px solid rgba(248, 183, 168, 0.58);
+  box-shadow: 0 0 32px rgba(244, 124, 98, 0.12);
+  inset: -0.45rem;
+  opacity: 0.88;
+  z-index: 0;
+}
+
+.vl-scanner-core::after {
+  background:
+    radial-gradient(circle at 44% 24%, rgba(255, 255, 255, 0.56), transparent 40%),
+    rgba(255, 255, 255, 0.2);
+  inset: 0.5rem;
+  z-index: 0;
+}
+
+.vl-scanner-core > svg {
+  filter: drop-shadow(0 5px 10px rgba(92, 27, 14, 0.12));
+  position: relative;
+  z-index: 1;
+}
+
+.vl-scanner-core-idle {
+  color: var(--vl-peach-strong);
+}
+
+.vl-scanner-core-scanning {
+  background:
+    radial-gradient(circle at 45% 24%, rgba(255, 255, 255, 0.64), transparent 36%),
+    linear-gradient(180deg, rgba(255, 176, 160, 0.98), rgba(244, 124, 98, 0.94));
+  box-shadow:
+    0 18px 38px rgba(244, 124, 98, 0.24),
+    0 0 42px rgba(244, 124, 98, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    inset 0 -12px 24px rgba(186, 58, 38, 0.16);
+  color: #FFFFFF;
+}
+
+.vl-scanner-core-scanning::before {
+  border-color: rgba(244, 124, 98, 0.44);
+  box-shadow:
+    0 0 0 0.3rem rgba(253, 233, 227, 0.62),
+    0 0 36px rgba(244, 124, 98, 0.2);
+}
+
+.vl-scanner-core-scanning::after {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.vl-scanner-core-ready {
+  background:
+    radial-gradient(circle at 45% 24%, rgba(255, 255, 255, 0.72), transparent 38%),
+    linear-gradient(180deg, rgba(232, 246, 236, 0.94), rgba(196, 234, 207, 0.76));
+  box-shadow:
+    0 16px 34px rgba(46, 159, 93, 0.14),
+    0 10px 28px rgba(7, 27, 58, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -10px 20px rgba(46, 159, 93, 0.08);
+  color: var(--vl-success);
+}
+
+.vl-scanner-core-ready::before {
+  border-color: rgba(46, 159, 93, 0.26);
+  box-shadow:
+    0 0 0 0.28rem rgba(232, 246, 236, 0.72),
+    0 0 30px rgba(46, 159, 93, 0.12);
+}
+
 .vl-glass-pill {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.52)),
@@ -399,6 +504,15 @@ button {
   animation: scanner-glow 3.2s ease-in-out infinite;
 }
 
+.vl-heart-beat {
+  animation: vl-heart-beat 1.35s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.vl-ring-pulse::before {
+  animation: vl-ring-pulse 2.4s ease-in-out infinite;
+}
+
 @keyframes screen-in {
   from {
     opacity: 0;
@@ -522,6 +636,36 @@ button {
   }
 }
 
+@keyframes vl-heart-beat {
+  0%,
+  100% {
+    opacity: 0.96;
+    transform: scale(1);
+  }
+
+  42% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  64% {
+    transform: scale(1);
+  }
+}
+
+@keyframes vl-ring-pulse {
+  0%,
+  100% {
+    opacity: 0.68;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-screen-in,
   .animate-card-in {
@@ -547,6 +691,11 @@ button {
 
   .scanner-surface .scanner-ring,
   .scanner-surface .scanner-glow {
+    animation: none;
+  }
+
+  .vl-heart-beat,
+  .vl-ring-pulse::before {
     animation: none;
   }
 }

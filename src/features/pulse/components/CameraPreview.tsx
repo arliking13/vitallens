@@ -7,10 +7,10 @@ import type { FingerGateState } from "@/features/pulse/lib/fingerGate";
 import type { CameraStatus } from "@/features/pulse/hooks/useRearCamera";
 import {
   CameraIcon,
+  CheckIcon,
   FingerTapIcon,
   HeartIcon,
   ScanPlayIcon,
-  SparkIcon,
 } from "@/shared/components/LineIcons";
 
 type CameraPreviewProps = {
@@ -126,6 +126,7 @@ const instructionItems = [
 ] as const;
 
 type InstructionId = (typeof instructionItems)[number]["id"];
+type ScannerCoreState = "idle" | "scanning" | "ready";
 
 function getScannerCopy({
   fingerGateState,
@@ -168,6 +169,29 @@ function getActiveInstruction({
   }
 
   return "scan";
+}
+
+function getScannerCoreState({
+  fingerGateState,
+  isSampling,
+  title,
+}: {
+  fingerGateState?: FingerGateState;
+  isSampling: boolean;
+  title: string;
+}): ScannerCoreState {
+  if (title === "Estimate ready") {
+    return "ready";
+  }
+
+  if (
+    isSampling &&
+    (fingerGateState === "stabilizing" || fingerGateState === "recording")
+  ) {
+    return "scanning";
+  }
+
+  return "idle";
 }
 
 function clampSignalValue(value: number) {
@@ -228,6 +252,17 @@ export function CameraPreview({
   const title = scannerTitle ?? copy.title;
   const detail = scannerDetail ?? copy.detail;
   const label = scannerLabel ?? (hasStream ? copy.label : emptyStateCopy[status]);
+  const scannerCoreState = getScannerCoreState({
+    fingerGateState,
+    isSampling,
+    title,
+  });
+  const ScannerCoreIcon =
+    scannerCoreState === "ready"
+      ? CheckIcon
+      : scannerCoreState === "scanning"
+        ? HeartIcon
+        : FingerTapIcon;
   const signalPath = buildSignalPath(liveSignal ?? []);
   const animationStyle: AnimationStyle = {
     "--card-delay": `${delayMs}ms`,
@@ -297,7 +332,7 @@ export function CameraPreview({
           ].join(" ")}
         >
           <div
-            className="scanner-glow absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(244,124,98,0.18)] blur-2xl"
+            className="scanner-glow absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(244,124,98,0.14)] blur-2xl"
             aria-hidden="true"
           />
           <div
@@ -337,12 +372,23 @@ export function CameraPreview({
               })}
             </div>
             <div
-              className="scanner-ring mx-auto grid h-28 w-28 place-items-center rounded-full border border-white/80 bg-[rgba(253,233,227,0.68)] shadow-[0_0_54px_rgba(244,124,98,0.22),inset_0_1px_0_rgba(255,255,255,0.94),inset_0_-12px_28px_rgba(244,124,98,0.08)]"
+              className={[
+                "vl-scanner-core",
+                `vl-scanner-core-${scannerCoreState}`,
+                scannerCoreState === "scanning" ? "vl-ring-pulse" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               aria-hidden="true"
             >
-              <div className="grid h-20 w-20 place-items-center rounded-full border border-white/75 bg-[rgba(244,124,98,0.3)] shadow-[0_10px_30px_rgba(244,124,98,0.18),inset_0_0_34px_rgba(244,124,98,0.22)]">
-                <SparkIcon className="h-8 w-8 text-white drop-shadow-sm" />
-              </div>
+              <ScannerCoreIcon
+                className={[
+                  scannerCoreState === "scanning" ? "vl-heart-beat" : "",
+                  scannerCoreState === "idle" ? "h-7 w-7" : "h-8 w-8",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              />
             </div>
             <p className="mt-4 text-base font-bold text-[var(--vl-text)]">
               {title}

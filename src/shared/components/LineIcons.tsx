@@ -88,6 +88,14 @@ export function SparkIcon(props: LineIconProps) {
   );
 }
 
+export function CheckIcon(props: LineIconProps) {
+  return (
+    <IconShell {...props}>
+      <path d="m6 12.5 3.7 3.7L18.5 7.4" />
+    </IconShell>
+  );
+}
+
 export function CameraIcon(props: LineIconProps) {
   return (
     <IconShell {...props}>
