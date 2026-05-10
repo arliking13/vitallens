@@ -20,6 +20,7 @@ type CameraPreviewProps = {
   isPulseCheckActive?: boolean;
   isSampling?: boolean;
   liveSignal?: number[];
+  onOpenScanGuide?: () => void;
   scannerDetail?: string;
   scannerTitle?: string;
   showCameraPreview?: boolean;
@@ -211,6 +212,7 @@ export function CameraPreview({
   hasPulseEstimate = false,
   isSampling = false,
   liveSignal,
+  onOpenScanGuide,
   scannerDetail,
   scannerTitle,
   showCameraPreview = false,
@@ -268,9 +270,21 @@ export function CameraPreview({
             <CameraIcon className="h-[1.125rem] w-[1.125rem]" />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-[var(--vl-text)]">
-              Pulse scanner
-            </p>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <p className="text-sm font-bold text-[var(--vl-text)]">
+                Pulse scanner
+              </p>
+              {onOpenScanGuide ? (
+                <button
+                  aria-label="Open pulse scan guide"
+                  className="vl-glass-pill interactive-press min-h-7 px-2.5 text-[0.68rem] font-bold text-[var(--vl-text-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vl-peach)]"
+                  onClick={onOpenScanGuide}
+                  type="button"
+                >
+                  ? Guide
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
         <span
