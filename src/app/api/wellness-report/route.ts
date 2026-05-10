@@ -10,10 +10,23 @@ const DEFAULT_WATSONX_MODEL_ID =
   "mistralai/mistral-small-3-1-24b-instruct-2503";
 const WATSONX_MAX_NEW_TOKENS = 120;
 const WATSONX_ERROR_LOG_LIMIT = 2000;
-const TELEMETRY_MAX_POINTS = 120;
+const TELEMETRY_MAX_POINTS = 80;
 const IBM_PROJECT_ID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UUID_PREFIX_PATTERN = /^[0-9a-f]{8}-/i;
+const unsafeReportTerms = [
+  "abnormal",
+  "clinical",
+  "condition",
+  "diagnosis",
+  "disease",
+  "healthy",
+  "medical advice",
+  "normal",
+  "risk",
+  "treatment",
+  "unhealthy",
+];
 const fallbackSummary: WellnessSummaryResponse = {
   nextStep:
     "Use the local results as a wellness snapshot and repeat the check later if needed.",
@@ -290,12 +303,14 @@ function buildPrompt(reportInput: WellnessReportInput) {
   const compactReportInput = buildCompactReportInput(reportInput);
 
   return [
-    "Write a concise clinical-style wellness report for VitalLens using only this structured phone-sensor data and compact telemetry.",
+    "Write a concise wellness report for VitalLens using only this structured phone-sensor data and compact telemetry.",
     "VitalLens is not a medical device. Do not diagnose, advise treatment, claim clinical accuracy, mention medical conditions, or use normal/abnormal/healthy/risk/disease.",
     "Use the telemetry patterns and stats to interpret reliability, consistency, and session quality. Do not simply repeat the final labels or values.",
     "Comment on pulse signal reliability, breath motion consistency, whether this session is usable as a wellness snapshot, what may have reduced confidence, and one practical way to repeat the check more cleanly.",
-    "Return JSON only with keys summary, observations, nextStep.",
-    "summary: exactly 2 short sentences interpreting the quality of this phone-based wellness snapshot.",
+    "Return ONLY valid JSON. No markdown. No code fences. No comments. No trailing text.",
+    "Use double quotes only. Do not include unescaped line breaks inside string values. Keep strings short.",
+    'Use exactly this JSON shape: {"summary":"string","observations":["string","string","string"],"nextStep":"string"}',
+    "summary: max 2 short sentences interpreting the quality of this phone-based wellness snapshot.",
     "observations: exactly 3 strings labelled Pulse signal:, Breath motion:, Session quality:. Keep each observation short and confidence-aware.",
     "nextStep: exactly 1 sentence with one specific practical suggestion for a cleaner repeat check. Do not say Continue monitoring as needed.",
     `Data: ${JSON.stringify(compactReportInput)}`,
@@ -330,34 +345,182 @@ function extractGeneratedText(response: WatsonxChatResponse) {
   return typeof generatedText === "string" ? generatedText : null;
 }
 
-function parseSummary(generatedText: string): WellnessSummaryResponse {
-  const jsonStart = generatedText.indexOf("{");
-  const jsonEnd = generatedText.lastIndexOf("}");
-  const jsonText =
-    jsonStart >= 0 && jsonEnd > jsonStart
-      ? generatedText.slice(jsonStart, jsonEnd + 1)
-      : generatedText;
-  const parsed = JSON.parse(jsonText) as Partial<WellnessSummaryResponse>;
+function stripMarkdownFences(text: string) {
+  return text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+}
+
+function extractJsonObject(text: string) {
+  const jsonStart = text.indexOf("{");
+  const jsonEnd = text.lastIndexOf("}");
+
+  if (jsonStart >= 0 && jsonEnd > jsonStart) {
+    return text.slice(jsonStart, jsonEnd + 1);
+  }
+
+  return text;
+}
+
+function safeParseWatsonxReport(text: string) {
+  const trimmedText = text.trim();
+  const withoutFences = stripMarkdownFences(trimmedText);
+  const candidates = [
+    trimmedText,
+    withoutFences,
+    extractJsonObject(withoutFences),
+  ].filter((candidate, index, allCandidates) => {
+    return candidate.length > 0 && allCandidates.indexOf(candidate) === index;
+  });
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate) as Partial<WellnessSummaryResponse>;
+    } catch {
+      // Try the next cleaned candidate before falling back to raw text handling.
+    }
+  }
+
+  return null;
+}
+
+function hasUnsafeReportTerms(value: string) {
+  const lowerValue = value.toLowerCase();
+  return unsafeReportTerms.some((term) => lowerValue.includes(term));
+}
+
+function cleanGeneratedText(value: string) {
+  return stripMarkdownFences(value)
+    .replace(/[{}\[\]",]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function splitSentences(value: string) {
+  return (
+    cleanGeneratedText(value).match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? []
+  )
+    .map((sentence) => sentence.trim())
+    .filter(
+      (sentence) => sentence.length > 0 && !hasUnsafeReportTerms(sentence),
+    );
+}
+
+function limitSentence(value: string, maxLength = 180) {
+  const trimmedValue = value.trim();
+
+  if (trimmedValue.length <= maxLength) {
+    return trimmedValue;
+  }
+
+  return `${trimmedValue.slice(0, maxLength - 1).trimEnd()}.`;
+}
+
+function getPulseSignalObservation(reportInput: WellnessReportInput) {
+  const pulse = reportInput.pulse;
+
+  if (!pulse) {
+    return "Pulse signal: pulse data was not included in this report.";
+  }
+
+  const sampleText =
+    pulse.sampleSeconds !== null ? `${pulse.sampleSeconds}-second` : "clean";
+  const variationText =
+    typeof pulse.telemetry?.signalStdDev === "number"
+      ? ` Waveform variation was ${pulse.telemetry.signalStdDev}.`
+      : "";
+
+  return `Pulse signal: the ${sampleText} finger-camera sample produced a ${pulse.confidence} confidence estimate with ${pulse.signalLabel.toLowerCase()} signal.${variationText}`;
+}
+
+function getBreathMotionObservation(reportInput: WellnessReportInput) {
+  const breath = reportInput.breath;
+
+  if (!breath) {
+    return "Breath motion: breath motion data was not included in this report.";
+  }
+
+  const variationText =
+    typeof breath.telemetry?.motionStdDev === "number"
+      ? ` Motion variation was ${breath.telemetry.motionStdDev}.`
+      : "";
+
+  return `Breath motion: ${breath.motionLabel.toLowerCase()} phone motion with ${breath.rhythmLabel.toLowerCase()} rhythm over ${breath.sampleSeconds} seconds.${variationText}`;
+}
+
+function getSessionQualityObservation(reportInput: WellnessReportInput) {
+  const pulseQuality = reportInput.pulse?.confidence ?? "missing";
+  const breathQuality = reportInput.breath?.qualityLabel ?? "missing";
+
+  return `Session quality: pulse confidence was ${pulseQuality} and breath motion quality was ${breathQuality}, so use this as a wellness-only snapshot.`;
+}
+
+function buildSummaryFromRawText(
+  generatedText: string,
+  reportInput: WellnessReportInput,
+): WellnessSummaryResponse {
+  const sentences = splitSentences(generatedText);
+  const summary =
+    sentences.length > 0
+      ? sentences.slice(0, 2).map((sentence) => limitSentence(sentence)).join(" ")
+      : "VitalLens received a phone-based wellness snapshot from the available pulse and breath checks. This summary is not for medical decisions.";
+
+  return {
+    nextStep:
+      "Repeat the check while seated, with your finger and phone held still for a cleaner comparison snapshot.",
+    observations: [
+      getPulseSignalObservation(reportInput),
+      getBreathMotionObservation(reportInput),
+      getSessionQualityObservation(reportInput),
+    ].map((observation) => limitSentence(observation, 220)),
+    source: "ibm-watsonx",
+    summary,
+  };
+}
+
+function parseSummary(
+  generatedText: string,
+  reportInput: WellnessReportInput,
+): WellnessSummaryResponse {
+  const parsed = safeParseWatsonxReport(generatedText);
+
+  if (!parsed) {
+    console.warn(
+      "[wellness-report] Watsonx output was not valid JSON; using raw text recovery.",
+    );
+    return buildSummaryFromRawText(generatedText, reportInput);
+  }
+
   const parsedObservations = Array.isArray(parsed.observations)
     ? parsed.observations.filter(
         (observation): observation is string =>
-          typeof observation === "string" && observation.length > 0,
+          typeof observation === "string" &&
+          observation.length > 0 &&
+          !hasUnsafeReportTerms(observation),
       )
     : [];
   const observations = [...parsedObservations, ...fallbackSummary.observations]
     .slice(0, 3);
+  const summary =
+    typeof parsed.summary === "string" &&
+    parsed.summary &&
+    !hasUnsafeReportTerms(parsed.summary)
+      ? parsed.summary
+      : buildSummaryFromRawText(generatedText, reportInput).summary;
+  const nextStep =
+    typeof parsed.nextStep === "string" &&
+    parsed.nextStep &&
+    !hasUnsafeReportTerms(parsed.nextStep)
+      ? parsed.nextStep
+      : buildSummaryFromRawText(generatedText, reportInput).nextStep;
 
   return {
-    nextStep:
-      typeof parsed.nextStep === "string" && parsed.nextStep
-        ? parsed.nextStep
-        : fallbackSummary.nextStep,
+    nextStep,
     observations,
     source: "ibm-watsonx",
-    summary:
-      typeof parsed.summary === "string" && parsed.summary
-        ? parsed.summary
-        : fallbackSummary.summary,
+    summary,
   };
 }
 
@@ -442,7 +605,9 @@ export async function POST(request: Request) {
       throw new Error("IBM watsonx response did not include generated text.");
     }
 
-    return Response.json(parseSummary(generatedText));
+    console.info("[wellness-report] raw watsonx output", generatedText);
+
+    return Response.json(parseSummary(generatedText, reportInput));
   } catch (error) {
     console.error("[wellness-report] Returning fallback summary", {
       env: {
