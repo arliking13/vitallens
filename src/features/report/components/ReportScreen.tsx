@@ -24,14 +24,14 @@ type SummaryStatus = "idle" | "loading" | "ready" | "fallback";
 
 const unavailableSummary: WellnessSummaryResponse = {
   nextStep:
-    "Review your local pulse and breath results. You can repeat the check later for another wellness snapshot.",
+    "Use the local results as a wellness snapshot and repeat the check later if needed.",
   observations: [
-    "Your local pulse and breath results remain visible.",
-    "This check-in is wellness-only and is not for medical decisions.",
+    "Pulse and breath results are still shown locally.",
+    "You can regenerate the summary after the service is available.",
   ],
   source: "fallback",
   summary:
-    "AI summary is unavailable right now. Your local pulse and breath results are still shown.",
+    "Your local pulse and breath motion results are available, but the IBM summary could not be generated right now.",
 };
 
 function getMotionLabel(result: BreathMotionResult) {
@@ -82,7 +82,11 @@ export function ReportScreen({
   const hasAnyResult = Boolean(pulseResult || breathResult);
   const hasBothResults = Boolean(pulseResult && breathResult);
   const summaryButtonLabel =
-    summaryStatus === "loading" ? "Generating..." : "Generate summary";
+    summaryStatus === "loading"
+      ? "Generating..."
+      : summary
+        ? "Regenerate summary"
+        : "Generate summary";
 
   async function handleGenerateSummary() {
     if (!hasAnyResult || summaryStatus === "loading") {
@@ -248,13 +252,6 @@ export function ReportScreen({
             available on this device.
           </p>
         )}
-
-        {summaryStatus === "fallback" ? (
-          <p className="mt-3 text-sm leading-6 text-[var(--vl-text-muted)]">
-            AI summary is unavailable right now. Your local pulse and breath
-            results are still shown.
-          </p>
-        ) : null}
 
         <Button
           className="mt-4 min-h-12 w-full text-sm"

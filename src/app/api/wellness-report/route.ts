@@ -6,7 +6,8 @@ import type {
 export const runtime = "nodejs";
 
 const DEFAULT_WATSONX_VERSION = "2024-03-14";
-const DEFAULT_WATSONX_MODEL_ID = "ibm/granite-3-8b-instruct";
+const DEFAULT_WATSONX_MODEL_ID =
+  "mistralai/mistral-small-3-1-24b-instruct-2503";
 const WATSONX_MAX_NEW_TOKENS = 120;
 const WATSONX_ERROR_LOG_LIMIT = 2000;
 const IBM_PROJECT_ID_V4_PATTERN =
@@ -14,14 +15,14 @@ const IBM_PROJECT_ID_V4_PATTERN =
 const UUID_PREFIX_PATTERN = /^[0-9a-f]{8}-/i;
 const fallbackSummary: WellnessSummaryResponse = {
   nextStep:
-    "Review your local results and repeat the check later if you want another wellness snapshot.",
+    "Use the local results as a wellness snapshot and repeat the check later if needed.",
   observations: [
-    "Your pulse estimate and breath motion check are shown locally.",
-    "This summary is wellness-only and is not for medical decisions.",
+    "Pulse and breath results are still shown locally.",
+    "You can regenerate the summary after the service is available.",
   ],
   source: "fallback",
   summary:
-    "AI summary is unavailable right now. Your local pulse and breath results are still shown.",
+    "Your local pulse and breath motion results are available, but the IBM summary could not be generated right now.",
 };
 
 type WatsonxChatResponse = {
@@ -202,10 +203,12 @@ function buildPrompt(reportInput: WellnessReportInput) {
   const compactReportInput = buildCompactReportInput(reportInput);
 
   return [
-    "You write concise, safe, wellness-only JSON summaries for VitalLens.",
-    "Rules: no diagnosis, treatment advice, clinical accuracy claims, medical conditions, or normal/abnormal labels.",
-    "Use only this structured data. Mention pulse estimate and breath motion check when present.",
-    'Return JSON only: {"summary":"1 short sentence","observations":["short point 1","short point 2"],"nextStep":"1 short safe next step"}.',
+    "Write a concise clinical-style wellness report for VitalLens using only this structured phone-sensor data.",
+    "VitalLens is not a medical device. Do not diagnose, advise treatment, claim clinical accuracy, mention medical conditions, or use normal/abnormal/healthy/risk/disease.",
+    "Return JSON only with keys summary, observations, nextStep.",
+    "summary: exactly 2 short sentences. Mention phone-based wellness snapshot and not a medical reading/decision.",
+    "observations: exactly 3 strings labelled Pulse:, Breathing:, Signal quality:. Include actual values when present: BPM, pulse confidence, pulse sample seconds, pulse signal, breath motion, rhythm, breath quality, breath sample seconds.",
+    "nextStep: one practical next step. Do not say Continue monitoring as needed.",
     `Data: ${JSON.stringify(compactReportInput)}`,
   ].join("\n");
 }
