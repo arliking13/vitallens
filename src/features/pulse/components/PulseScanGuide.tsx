@@ -123,9 +123,11 @@ export function PulseScanGuide({ onClose }: PulseScanGuideProps) {
     <div
       aria-labelledby="pulse-scan-guide-title"
       aria-modal="true"
-      className="fixed inset-0 z-[100] flex h-[100dvh] w-screen items-center justify-center overflow-hidden overscroll-contain bg-[rgba(7,27,58,0.38)] px-4"
+      className="fixed inset-0 z-[100] flex h-[100dvh] w-screen items-center justify-center overflow-hidden overscroll-contain bg-[rgba(7,27,58,0.28)] px-4 backdrop-blur-md"
       role="dialog"
       style={{
+        WebkitBackdropFilter: "blur(18px) saturate(1.12)",
+        backdropFilter: "blur(18px) saturate(1.12)",
         paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
         paddingTop: "max(1rem, env(safe-area-inset-top))",
       }}
@@ -138,9 +140,13 @@ export function PulseScanGuide({ onClose }: PulseScanGuideProps) {
       />
 
       <section
-        className="animate-card-in relative z-10 flex w-[min(92vw,390px)] max-h-[min(82dvh,680px)] -translate-y-[2dvh] flex-col overflow-hidden rounded-[34px] border border-white/70 bg-white/82 p-3 shadow-[0_24px_80px_rgba(7,27,58,0.22),0_10px_28px_rgba(244,124,98,0.10),inset_0_1px_0_rgba(255,255,255,0.92)]"
+        className="animate-card-in relative z-10 flex w-[min(92vw,390px)] max-h-[min(82dvh,680px)] -translate-y-[2dvh] flex-col overflow-hidden rounded-[34px] border border-white/70 bg-white/60 p-3 shadow-[0_24px_80px_rgba(7,27,58,0.22),0_10px_28px_rgba(244,124,98,0.10),inset_0_1px_0_rgba(255,255,255,0.92)] backdrop-blur-2xl"
         onTouchEnd={handleTouchEnd}
         onTouchStart={handleTouchStart}
+        style={{
+          WebkitBackdropFilter: "blur(22px) saturate(1.45)",
+          backdropFilter: "blur(22px) saturate(1.45)",
+        }}
       >
         <div className="flex items-center justify-between gap-3">
           <h2
