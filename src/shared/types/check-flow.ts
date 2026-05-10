@@ -17,3 +17,43 @@ export type BreathMotionResult = {
   rhythmLabel: BreathRhythmLabel;
   sampleCount: number;
 };
+
+export type PulseConfidenceLabel = "low" | "fair" | "good";
+
+export type PulseCheckResult = {
+  bpm: number;
+  confidence: PulseConfidenceLabel;
+  sampleSeconds: number | null;
+  signalLabel: "Clean";
+  source: "Finger-camera signal";
+};
+
+export type WellnessReportPulseInput = {
+  bpm: number;
+  confidence: PulseConfidenceLabel;
+  sampleSeconds: number | null;
+  signalLabel: string;
+  source: string;
+};
+
+export type WellnessReportBreathInput = {
+  motionLabel: "Detected" | "Low";
+  qualityLabel: BreathQualityLabel;
+  rhythmLabel: BreathRhythmLabel;
+  sampleSeconds: number;
+  source: string;
+};
+
+export type WellnessReportInput = {
+  breath: WellnessReportBreathInput | null;
+  pulse: WellnessReportPulseInput | null;
+};
+
+export type WellnessSummarySource = "ibm-watsonx" | "fallback";
+
+export type WellnessSummaryResponse = {
+  nextStep: string;
+  observations: string[];
+  source: WellnessSummarySource;
+  summary: string;
+};

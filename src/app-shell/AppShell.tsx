@@ -6,7 +6,11 @@ import { BreathCheckScreen } from "@/features/breath/components/BreathCheckScree
 import { IntroScreen } from "@/features/intro/components/IntroScreen";
 import { PulseCheckScreen } from "@/features/pulse/components/PulseCheckScreen";
 import { ReportScreen } from "@/features/report/components/ReportScreen";
-import type { BreathMotionResult, StepId } from "@/shared/types/check-flow";
+import type {
+  BreathMotionResult,
+  PulseCheckResult,
+  StepId,
+} from "@/shared/types/check-flow";
 
 import { StepNavigation } from "./StepNavigation";
 import { APP_STEPS } from "./steps";
@@ -18,6 +22,7 @@ export function AppShell() {
   const [completedSteps, setCompletedSteps] = useState<StepId[]>([]);
   const [breathResult, setBreathResult] =
     useState<BreathMotionResult | null>(null);
+  const [pulseResult, setPulseResult] = useState<PulseCheckResult | null>(null);
 
   const activeIndex = stepOrder.indexOf(activeStep);
 
@@ -51,6 +56,7 @@ export function AppShell() {
   function restart() {
     setCompletedSteps([]);
     setBreathResult(null);
+    setPulseResult(null);
     setActiveStep("intro");
   }
 
@@ -103,6 +109,7 @@ export function AppShell() {
               <PulseCheckScreen
                 onBack={goBack}
                 onNext={() => completeAndGoNext("pulse")}
+                onResult={setPulseResult}
               />
             ) : null}
             {activeStep === "breath" ? (
@@ -117,6 +124,7 @@ export function AppShell() {
                 breathResult={breathResult}
                 onBack={goBack}
                 onRestart={restart}
+                pulseResult={pulseResult}
               />
             ) : null}
           </div>
