@@ -6,7 +6,7 @@ import type {
 export const runtime = "nodejs";
 
 const DEFAULT_WATSONX_VERSION = "2024-03-14";
-const DEFAULT_WATSONX_MODEL_ID = "ibm/granite-3-3-2b-instruct";
+const DEFAULT_WATSONX_MODEL_ID = "ibm/granite-3-8b-instruct";
 const WATSONX_MAX_NEW_TOKENS = 120;
 const WATSONX_ERROR_LOG_LIMIT = 2000;
 const IBM_PROJECT_ID_V4_PATTERN =
