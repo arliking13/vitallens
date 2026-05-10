@@ -13,11 +13,23 @@ type BreathCheckScreenProps = {
   onResult: (result: BreathMotionResult | null) => void;
 };
 
-type BreathPhase = "idle" | "recording" | "complete" | "unavailable";
+type BreathPhase =
+  | "idle"
+  | "placement"
+  | "recording"
+  | "complete"
+  | "unavailable";
 
 type BreathMotionSample = {
   t: number;
   value: number;
+};
+
+type PlacementMotionSample = {
+  accelerationMagnitude: number | null;
+  gravityMagnitude: number | null;
+  rotationMagnitude: number | null;
+  t: number;
 };
 
 type DeviceMotionEventConstructorWithPermission =
@@ -35,6 +47,10 @@ const RECORDING_DURATION_MS = RECORDING_DURATION_SECONDS * 1000;
 const START_GUIDE_DELAY_MS = 4300;
 const HALFWAY_GUIDE_MS = 15000;
 const ALMOST_DONE_GUIDE_MS = 26000;
+const PLACEMENT_WINDOW_MS = 3000;
+const PLACEMENT_MIN_DURATION_MS = 2200;
+const PLACEMENT_CHECK_INTERVAL_MS = 250;
+const PLACEMENT_START_ANYWAY_SECONDS = 12;
 
 const fallbackMessage =
   "Motion access unavailable. You can continue with pulse-only report.";
@@ -102,6 +118,71 @@ function getMotionMagnitude(event: DeviceMotionEvent) {
   return Math.hypot(x ?? 0, y ?? 0, z ?? 0);
 }
 
+function getAccelerationMagnitude(
+  acceleration: DeviceMotionEventAcceleration | null,
+) {
+  if (!acceleration) {
+    return null;
+  }
+
+  const x = acceleration.x;
+  const y = acceleration.y;
+  const z = acceleration.z;
+  const hasMotionValue =
+    typeof x === "number" || typeof y === "number" || typeof z === "number";
+
+  if (!hasMotionValue) {
+    return null;
+  }
+
+  return Math.hypot(x ?? 0, y ?? 0, z ?? 0);
+}
+
+function getRotationMagnitude(rotationRate: DeviceMotionEventRotationRate | null) {
+  if (!rotationRate) {
+    return null;
+  }
+
+  const alpha = rotationRate.alpha;
+  const beta = rotationRate.beta;
+  const gamma = rotationRate.gamma;
+  const hasRotationValue =
+    typeof alpha === "number" ||
+    typeof beta === "number" ||
+    typeof gamma === "number";
+
+  if (!hasRotationValue) {
+    return null;
+  }
+
+  return Math.hypot(alpha ?? 0, beta ?? 0, gamma ?? 0);
+}
+
+function getPlacementMotionSample(
+  event: DeviceMotionEvent,
+): PlacementMotionSample | null {
+  const accelerationMagnitude = getAccelerationMagnitude(event.acceleration);
+  const gravityMagnitude = getAccelerationMagnitude(
+    event.accelerationIncludingGravity,
+  );
+  const rotationMagnitude = getRotationMagnitude(event.rotationRate);
+
+  if (
+    accelerationMagnitude === null &&
+    gravityMagnitude === null &&
+    rotationMagnitude === null
+  ) {
+    return null;
+  }
+
+  return {
+    accelerationMagnitude,
+    gravityMagnitude,
+    rotationMagnitude,
+    t: performance.now(),
+  };
+}
+
 function buildPreviewSignal(samples: BreathMotionSample[]) {
   const values = samples.slice(-48).map((sample) => sample.value);
   const range = getRange(values);
@@ -158,6 +239,68 @@ function buildBucketedMotion(samples: BreathMotionSample[]) {
   return Array.from(buckets.entries())
     .sort(([leftIndex], [rightIndex]) => leftIndex - rightIndex)
     .map(([, values]) => average(values));
+}
+
+function getRecentPlacementSamples(samples: PlacementMotionSample[]) {
+  const latestSample = samples.at(-1);
+  if (!latestSample) {
+    return [];
+  }
+
+  return samples.filter(
+    (sample) => latestSample.t - sample.t <= PLACEMENT_WINDOW_MS,
+  );
+}
+
+function valuesFromPlacementSamples(
+  samples: PlacementMotionSample[],
+  key: keyof Omit<PlacementMotionSample, "t">,
+) {
+  return samples
+    .map((sample) => sample[key])
+    .filter((value): value is number => typeof value === "number");
+}
+
+function isPlacementStable(samples: PlacementMotionSample[]) {
+  const firstSample = samples[0];
+  const latestSample = samples.at(-1);
+
+  if (
+    samples.length < 12 ||
+    !firstSample ||
+    !latestSample ||
+    latestSample.t - firstSample.t < PLACEMENT_MIN_DURATION_MS
+  ) {
+    return false;
+  }
+
+  const gravityValues = valuesFromPlacementSamples(samples, "gravityMagnitude");
+  const accelerationValues = valuesFromPlacementSamples(
+    samples,
+    "accelerationMagnitude",
+  );
+  const rotationValues = valuesFromPlacementSamples(samples, "rotationMagnitude");
+  const hasPlacementSignal =
+    gravityValues.length >= 6 ||
+    accelerationValues.length >= 6 ||
+    rotationValues.length >= 6;
+  const gravityStable =
+    gravityValues.length < 6 ||
+    (standardDeviation(gravityValues) <= 0.22 && getRange(gravityValues) <= 0.9);
+  const accelerationStable =
+    accelerationValues.length < 6 ||
+    (average(accelerationValues) <= 0.45 &&
+      standardDeviation(accelerationValues) <= 0.28);
+  const rotationStable =
+    rotationValues.length < 6 ||
+    (average(rotationValues) <= 9 && getRange(rotationValues) <= 36);
+
+  return (
+    hasPlacementSignal &&
+    gravityStable &&
+    accelerationStable &&
+    rotationStable
+  );
 }
 
 function analyzeBreathMotion(
@@ -237,6 +380,10 @@ async function requestDeviceMotionAccess() {
 }
 
 function getHeaderDescription(phase: BreathPhase) {
+  if (phase === "placement") {
+    return "Place your phone on your chest or upper abdomen and keep it still.";
+  }
+
   if (phase === "recording") {
     return "Keep the phone still and breathe normally.";
   }
@@ -249,10 +396,14 @@ function getHeaderDescription(phase: BreathPhase) {
     return fallbackMessage;
   }
 
-  return "Place your iPhone on your chest. Audio will guide the check.";
+  return "Place your phone on your chest or upper abdomen. Audio will guide the check.";
 }
 
 function getPreviewStatus(phase: BreathPhase) {
+  if (phase === "placement") {
+    return "Placement";
+  }
+
   if (phase === "recording") {
     return "Listening";
   }
@@ -269,7 +420,7 @@ function getPreviewStatus(phase: BreathPhase) {
 }
 
 function getPrimaryButtonLabel(phase: BreathPhase) {
-  if (phase === "recording") {
+  if (phase === "placement" || phase === "recording") {
     return "Stop breath check";
   }
 
@@ -278,6 +429,26 @@ function getPrimaryButtonLabel(phase: BreathPhase) {
   }
 
   return "Start guided breath check";
+}
+
+function getCardInstruction(phase: BreathPhase) {
+  if (phase === "placement") {
+    return "Waiting for stable placement";
+  }
+
+  if (phase === "recording") {
+    return "Keep the phone still and breathe normally.";
+  }
+
+  if (phase === "complete") {
+    return "Check complete.";
+  }
+
+  if (phase === "unavailable") {
+    return "Motion access unavailable.";
+  }
+
+  return "Place your phone, then tap start.";
 }
 
 function getPreferredSpeechVoice() {
@@ -315,8 +486,8 @@ export function BreathCheckScreen({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [motionSignal, setMotionSignal] = useState<number[] | undefined>();
   const [phase, setPhase] = useState<BreathPhase>("idle");
+  const [placementElapsedSeconds, setPlacementElapsedSeconds] = useState(0);
   const [result, setResult] = useState<BreathMotionResult | null>(null);
-  const [, setSampleCount] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<number | null>(null);
@@ -326,6 +497,8 @@ export function BreathCheckScreen({
     null,
   );
   const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const placementSamplesRef = useRef<PlacementMotionSample[]>([]);
+  const placementStartedAtRef = useRef<number | null>(null);
   const recordingStartedAtRef = useRef<number | null>(null);
   const samplesRef = useRef<BreathMotionSample[]>([]);
   const timersRef = useRef<number[]>([]);
@@ -423,6 +596,55 @@ export function BreathCheckScreen({
     messages.forEach((message) => speak(message));
   }
 
+  function cancelGuidedCheck() {
+    isRunningRef.current = false;
+    clearTimers();
+    stopMotionListener();
+    placementSamplesRef.current = [];
+    samplesRef.current = [];
+    placementStartedAtRef.current = null;
+    recordingStartedAtRef.current = null;
+    setElapsedSeconds(0);
+    setMotionSignal(undefined);
+    setPhase("idle");
+    setPlacementElapsedSeconds(0);
+    setResult(null);
+    setStatusMessage(null);
+    onResult(null);
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }
+
+  function beginRecordingCountdown(announcePlacement: boolean) {
+    if (!isRunningRef.current) {
+      return;
+    }
+
+    clearTimers();
+    stopMotionListener();
+    placementSamplesRef.current = [];
+    placementStartedAtRef.current = null;
+    recordingStartedAtRef.current = null;
+    lastPreviewUpdateRef.current = 0;
+    samplesRef.current = [];
+    setElapsedSeconds(0);
+    setMotionSignal(undefined);
+    setPhase("recording");
+    setPlacementElapsedSeconds(0);
+    setStatusMessage(null);
+    speakSequence(
+      announcePlacement
+        ? ["Placement detected.", "Starting in three, two, one.", "Breathe normally."]
+        : ["Starting in three, two, one.", "Breathe normally."],
+    );
+
+    timersRef.current.push(
+      window.setTimeout(startMotionCollection, START_GUIDE_DELAY_MS),
+    );
+  }
+
   function completeRecording() {
     if (!isRunningRef.current) {
       return;
@@ -444,7 +666,6 @@ export function BreathCheckScreen({
     setMotionSignal(nextSignal);
     setPhase("complete");
     setResult(nextResult);
-    setSampleCount(nextResult.sampleCount);
     setStatusMessage(null);
     onResult(nextResult);
     speakSequence(["Check complete."]);
@@ -472,7 +693,6 @@ export function BreathCheckScreen({
 
       if (capturedAt - lastPreviewUpdateRef.current >= 250) {
         lastPreviewUpdateRef.current = capturedAt;
-        setSampleCount(samplesRef.current.length);
         const nextSignal = buildPreviewSignal(samplesRef.current);
         if (nextSignal) {
           setMotionSignal(nextSignal);
@@ -494,7 +714,6 @@ export function BreathCheckScreen({
         (performance.now() - startedAt) / 1000,
       );
       setElapsedSeconds(nextElapsedSeconds);
-      setSampleCount(samplesRef.current.length);
 
       if (nextElapsedSeconds >= RECORDING_DURATION_SECONDS) {
         completeRecording();
@@ -507,25 +726,92 @@ export function BreathCheckScreen({
     );
   }
 
+  function startPlacementCheck() {
+    if (!isRunningRef.current) {
+      return;
+    }
+
+    placementSamplesRef.current = [];
+    placementStartedAtRef.current = performance.now();
+    setPlacementElapsedSeconds(0);
+
+    const handleMotion = (event: DeviceMotionEvent) => {
+      const placementSample = getPlacementMotionSample(event);
+
+      if (!placementSample) {
+        return;
+      }
+
+      placementSamplesRef.current.push(placementSample);
+      const motionMagnitude =
+        placementSample.gravityMagnitude ??
+        placementSample.accelerationMagnitude ??
+        placementSample.rotationMagnitude;
+      const recentPlacementSamples = getRecentPlacementSamples(
+        placementSamplesRef.current,
+      );
+
+      if (
+        motionMagnitude !== null &&
+        placementSample.t - lastPreviewUpdateRef.current >= 250
+      ) {
+        lastPreviewUpdateRef.current = placementSample.t;
+        setMotionSignal(
+          buildPreviewSignal(
+            recentPlacementSamples
+              .map((sample) => ({
+                t: sample.t,
+                value:
+                  sample.gravityMagnitude ??
+                  sample.accelerationMagnitude ??
+                  sample.rotationMagnitude,
+              }))
+              .filter(
+                (sample): sample is BreathMotionSample =>
+                  typeof sample.value === "number",
+              ),
+          ),
+        );
+      }
+
+      if (isPlacementStable(recentPlacementSamples)) {
+        beginRecordingCountdown(true);
+      }
+    };
+
+    motionHandlerRef.current = handleMotion;
+    window.addEventListener("devicemotion", handleMotion);
+
+    intervalRef.current = window.setInterval(() => {
+      const startedAt = placementStartedAtRef.current;
+      if (startedAt === null) {
+        return;
+      }
+
+      setPlacementElapsedSeconds((performance.now() - startedAt) / 1000);
+    }, PLACEMENT_CHECK_INTERVAL_MS);
+  }
+
   async function startGuidedCheck() {
     clearTimers();
     stopMotionListener();
+    placementSamplesRef.current = [];
     samplesRef.current = [];
+    placementStartedAtRef.current = null;
     recordingStartedAtRef.current = null;
     lastPreviewUpdateRef.current = 0;
     isRunningRef.current = true;
     onResult(null);
     setElapsedSeconds(0);
     setMotionSignal(undefined);
-    setPhase("recording");
+    setPhase("placement");
+    setPlacementElapsedSeconds(0);
     setResult(null);
-    setSampleCount(0);
     setStatusMessage(null);
     prepareAudio();
     speakSequence([
-      "Place your iPhone on your chest.",
-      "Breathe normally.",
-      "Starting in three, two, one.",
+      "Place your phone on your chest or upper abdomen.",
+      "Keep it still.",
     ]);
 
     const motionAccess = await requestDeviceMotionAccess();
@@ -541,25 +827,35 @@ export function BreathCheckScreen({
       setPhase("unavailable");
       setStatusMessage(fallbackMessage);
       setElapsedSeconds(0);
-      setSampleCount(0);
       setMotionSignal(undefined);
       onResult(null);
       speakSequence([fallbackMessage]);
       return;
     }
 
-    timersRef.current.push(
-      window.setTimeout(startMotionCollection, START_GUIDE_DELAY_MS),
-    );
+    startPlacementCheck();
   }
 
   function handlePrimaryAction() {
+    if (phase === "placement") {
+      cancelGuidedCheck();
+      return;
+    }
+
     if (phase === "recording") {
-      completeRecording();
+      if (recordingStartedAtRef.current === null) {
+        cancelGuidedCheck();
+      } else {
+        completeRecording();
+      }
       return;
     }
 
     void startGuidedCheck();
+  }
+
+  function handleStartAnyway() {
+    beginRecordingCountdown(false);
   }
 
   useEffect(() => {
@@ -610,6 +906,10 @@ export function BreathCheckScreen({
   const signalLabel = result?.motionDetected ? "Detected" : "Low";
   const statusLabel = getPreviewStatus(phase);
   const wavePath = buildMotionWavePath(motionSignal);
+  const cardInstruction = getCardInstruction(phase);
+  const showStartAnyway =
+    phase === "placement" &&
+    placementElapsedSeconds >= PLACEMENT_START_ANYWAY_SECONDS;
 
   return (
     <div className="flex min-h-[calc(100dvh-7rem)] flex-col pb-32">
@@ -621,7 +921,9 @@ export function BreathCheckScreen({
       <Card
         className={[
           "signal-preview mt-6 overflow-hidden",
-          phase === "recording" ? "signal-breathe" : "",
+          phase === "placement" || phase === "recording"
+            ? "signal-breathe"
+            : "",
         ]
           .filter(Boolean)
           .join(" ")}
@@ -631,16 +933,16 @@ export function BreathCheckScreen({
         <div className="flex items-center justify-between gap-3 px-1 pb-4">
           <div>
             <p className="text-sm font-bold text-[var(--vl-text)]">
-              Audio-guided check
+              Phone motion check
             </p>
             <p className="mt-1 text-sm leading-5 text-[var(--vl-text-muted)]">
-              {phase === "recording" ? "Breathe normally." : "Audio guidance on."}
+              Guided by voice. Measured from small phone movements.
             </p>
           </div>
           <span
             className={[
               "shrink-0 rounded-full px-3 py-1.5 text-xs font-bold",
-              phase === "recording"
+              phase === "placement" || phase === "recording"
                 ? "vl-peach-pill"
                 : "vl-glass-pill text-[var(--vl-text-muted)]",
             ].join(" ")}
@@ -648,6 +950,9 @@ export function BreathCheckScreen({
             {statusLabel}
           </span>
         </div>
+        <p className="px-1 pb-3 text-sm font-bold text-[var(--vl-text)]">
+          {cardInstruction}
+        </p>
 
         <div
           className="relative h-56 overflow-hidden rounded-[22px] bg-white/35"
@@ -690,6 +995,15 @@ export function BreathCheckScreen({
           <span>Progress</span>
           <span>{sampleLabel}</span>
         </div>
+        {showStartAnyway ? (
+          <Button
+            className="mt-4 min-h-10 w-full text-sm"
+            onClick={handleStartAnyway}
+            variant="secondary"
+          >
+            Start anyway
+          </Button>
+        ) : null}
       </Card>
 
       {statusMessage ? (
@@ -704,7 +1018,7 @@ export function BreathCheckScreen({
         <section className="vl-result-card animate-card-in mt-4 p-4">
           <div className="flex flex-wrap gap-2">
             <span className="vl-peach-pill px-3 py-1 text-xs font-bold">
-              Signal: {signalLabel}
+              Motion: {signalLabel}
             </span>
             <span className="vl-glass-pill px-3 py-1 text-xs font-bold text-[var(--vl-text-muted)]">
               Rhythm: {result.rhythmLabel}
@@ -713,6 +1027,10 @@ export function BreathCheckScreen({
               Sample: {result.durationSeconds}s
             </span>
           </div>
+          <p className="mt-3 text-sm leading-6 text-[var(--vl-text-muted)]">
+            Detected from small phone movements while resting on your chest or
+            abdomen.
+          </p>
         </section>
       ) : null}
 
