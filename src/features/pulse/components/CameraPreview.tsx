@@ -362,15 +362,24 @@ export function CameraPreview({
               aria-hidden="true"
             >
               {scannerVisualState === "ready" ? (
-                <span className="vl-scanner-icon" aria-hidden="true">
+                <span
+                  className="vl-scanner-icon vl-heartbeat-test"
+                  aria-hidden="true"
+                >
                   <CheckIcon className="h-7 w-7" />
                 </span>
               ) : scannerVisualState === "scanning" ? (
-                <span className="vl-scanner-icon vl-heartbeat" aria-hidden="true">
+                <span
+                  className="vl-scanner-icon vl-heartbeat-test"
+                  aria-hidden="true"
+                >
                   <HeartIcon className="h-7 w-7" />
                 </span>
               ) : (
-                <span className="vl-scanner-icon" aria-hidden="true">
+                <span
+                  className="vl-scanner-icon vl-heartbeat-test"
+                  aria-hidden="true"
+                >
                   <FingerTapIcon className="h-6 w-6" />
                 </span>
               )}
