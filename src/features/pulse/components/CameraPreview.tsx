@@ -19,7 +19,6 @@ type CameraPreviewProps = {
   isSampling?: boolean;
   liveSignal?: number[];
   scannerDetail?: string;
-  scannerLabel?: string;
   scannerTitle?: string;
   showCameraPreview?: boolean;
   status: CameraStatus;
@@ -29,14 +28,6 @@ type CameraPreviewProps = {
 
 type AnimationStyle = CSSProperties & {
   "--card-delay"?: string;
-};
-
-const emptyStateCopy: Record<CameraStatus, string> = {
-  idle: "Camera is idle",
-  requesting: "Requesting camera",
-  ready: "Camera ready",
-  denied: "Permission denied",
-  error: "Camera error",
 };
 
 const scannerCopy: Record<
@@ -60,7 +51,7 @@ const scannerCopy: Record<
   ready: {
     detail: "Rest your finger over the rear camera to begin reading the signal.",
     label: "Ready",
-    title: "Camera check",
+    title: "Pulse scanner",
   },
   denied: {
     detail: "Allow camera access in Safari or browser settings to continue.",
@@ -108,19 +99,16 @@ const instructionItems = [
   {
     id: "place",
     title: "Place finger",
-    detail: "Cover the rear camera gently.",
     icon: FingerTapIcon,
   },
   {
     id: "hold",
     title: "Hold steady",
-    detail: "Keep your finger still and relaxed.",
     icon: HeartIcon,
   },
   {
     id: "scan",
     title: "Start scan",
-    detail: "Tap start. The flash will turn on.",
     icon: ScanPlayIcon,
   },
 ] as const;
@@ -189,6 +177,18 @@ function getScannerCoreState({
   return "idle";
 }
 
+function getStatusPillLabel(scannerCoreState: ScannerCoreState) {
+  if (scannerCoreState === "ready") {
+    return "Estimate ready";
+  }
+
+  if (scannerCoreState === "scanning") {
+    return "Scanning";
+  }
+
+  return "Ready";
+}
+
 function clampSignalValue(value: number) {
   return Math.min(1, Math.max(0, value));
 }
@@ -225,7 +225,6 @@ export function CameraPreview({
   isSampling = false,
   liveSignal,
   scannerDetail,
-  scannerLabel,
   scannerTitle,
   showCameraPreview = false,
   status,
@@ -246,7 +245,6 @@ export function CameraPreview({
   });
   const title = scannerTitle ?? copy.title;
   const detail = scannerDetail ?? copy.detail;
-  const label = scannerLabel ?? (hasStream ? copy.label : emptyStateCopy[status]);
   const scannerCoreState = getScannerCoreState({ isSampling, title });
   const ScannerCoreIcon =
     scannerCoreState === "ready"
@@ -279,20 +277,29 @@ export function CameraPreview({
     >
       <div className="flex items-center justify-between gap-3 px-2 pb-2.5">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="vl-glass-icon h-10 w-10" aria-hidden="true">
-            <CameraIcon className="h-5 w-5" />
+          <span className="vl-glass-icon h-9 w-9" aria-hidden="true">
+            <CameraIcon className="h-[1.125rem] w-[1.125rem]" />
           </span>
           <div className="min-w-0">
             <p className="text-sm font-bold text-[var(--vl-text)]">
-              Camera check
-            </p>
-            <p className="mt-1 text-sm leading-5 text-[var(--vl-text-muted)]">
-              Sensor view
+              Pulse scanner
             </p>
           </div>
         </div>
-        <span className="vl-glass-pill shrink-0 px-3 py-1.5 text-xs font-semibold text-[var(--vl-text-muted)]">
-          {label}
+        <span
+          className={[
+            "vl-state-pill",
+            `vl-state-pill-${scannerCoreState}`,
+          ].join(" ")}
+        >
+          {scannerCoreState === "ready" ? (
+            <CheckIcon className="h-3.5 w-3.5" />
+          ) : scannerCoreState === "scanning" ? (
+            <HeartIcon className="vl-heartbeat h-3.5 w-3.5" />
+          ) : (
+            <span className="vl-state-dot" aria-hidden="true" />
+          )}
+          <span>{getStatusPillLabel(scannerCoreState)}</span>
         </span>
       </div>
 
@@ -359,9 +366,6 @@ export function CameraPreview({
                     </span>
                     <p className="mt-1.5 text-[0.7rem] font-bold text-[var(--vl-text)]">
                       {item.title}
-                    </p>
-                    <p className="mt-1 text-[0.68rem] leading-4 text-[var(--vl-text-muted)]">
-                      {item.detail}
                     </p>
                   </div>
                 );

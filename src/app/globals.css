@@ -247,6 +247,70 @@ button {
     0 0 30px rgba(46, 159, 93, 0.12);
 }
 
+.vl-state-pill {
+  -webkit-backdrop-filter: blur(16px) saturate(1.45);
+  align-items: center;
+  backdrop-filter: blur(16px) saturate(1.45);
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: var(--vl-radius-pill);
+  box-shadow:
+    0 10px 24px rgba(7, 27, 58, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    inset 0 -1px 0 rgba(7, 27, 58, 0.04);
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 0.38rem;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.42rem 0.7rem;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.vl-state-pill-idle {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.5)),
+    rgba(255, 255, 255, 0.58);
+  color: var(--vl-text-muted);
+}
+
+.vl-state-pill-scanning {
+  background:
+    radial-gradient(circle at 42% 0%, rgba(255, 255, 255, 0.48), transparent 46%),
+    linear-gradient(180deg, rgba(255, 225, 218, 0.96), rgba(253, 210, 200, 0.72));
+  border-color: rgba(248, 183, 168, 0.8);
+  box-shadow:
+    0 12px 28px rgba(244, 124, 98, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(244, 124, 98, 0.08);
+  color: var(--vl-peach-strong);
+}
+
+.vl-state-pill-ready {
+  background:
+    linear-gradient(180deg, rgba(245, 252, 247, 0.94), rgba(232, 246, 236, 0.72)),
+    rgba(232, 246, 236, 0.82);
+  border-color: rgba(189, 229, 203, 0.82);
+  color: var(--vl-success);
+}
+
+.vl-state-pill > svg,
+.vl-state-pill > span {
+  position: relative;
+  z-index: 1;
+}
+
+.vl-state-dot {
+  background: var(--vl-peach);
+  border-radius: var(--vl-radius-pill);
+  box-shadow: 0 0 0 0.2rem rgba(244, 124, 98, 0.12);
+  display: inline-block;
+  height: 0.42rem;
+  width: 0.42rem;
+}
+
 .vl-glass-pill {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.52)),
@@ -322,10 +386,10 @@ button {
     linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.54)),
     rgba(250, 247, 242, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.76);
-  border-radius: 30px;
+  border-radius: 28px;
   box-shadow:
-    0 20px 54px rgba(7, 27, 58, 0.12),
-    0 8px 26px rgba(244, 124, 98, 0.1),
+    0 18px 46px rgba(7, 27, 58, 0.11),
+    0 7px 22px rgba(244, 124, 98, 0.09),
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
     inset 0 -1px 0 rgba(7, 27, 58, 0.05);
 }
@@ -672,13 +736,17 @@ button {
 @keyframes vl-heartbeat {
   0%,
   100% {
+    filter: drop-shadow(0 5px 10px rgba(92, 27, 14, 0.12));
     opacity: 0.96;
     transform: scale(1);
   }
 
   42% {
+    filter:
+      drop-shadow(0 7px 12px rgba(92, 27, 14, 0.14))
+      drop-shadow(0 0 10px rgba(255, 255, 255, 0.44));
     opacity: 1;
-    transform: scale(1.08);
+    transform: translateY(-1px) scale(1.14);
   }
 
   64% {

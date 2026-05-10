@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/shared/components/Button";
 import { InfoRow } from "@/shared/components/InfoRow";
 import { HeartIcon } from "@/shared/components/LineIcons";
-import { ScreenHeader } from "@/shared/components/ScreenHeader";
 
 import { CameraPreview } from "./CameraPreview";
 import {
@@ -88,8 +87,6 @@ function getScannerTitle({
 }: {
   hasPulseEstimate: boolean;
   isSampling: boolean;
-  signalQuality?: keyof typeof signalQualityLabels;
-  fingerGateState?: keyof typeof fingerGateLabels;
 }) {
   if (hasPulseEstimate) {
     return "Estimate ready";
@@ -108,15 +105,13 @@ function getScannerDetail({
 }: {
   hasPulseEstimate: boolean;
   isSampling: boolean;
-  pulseMessage?: string;
-  scannerTitle?: string;
 }) {
   if (hasPulseEstimate) {
     return "You can continue or hold a little longer.";
   }
 
   if (isSampling) {
-    return "Hold still for about 20 seconds.";
+    return "Keep your finger still for a cleaner reading.";
   }
 
   return "Cover the rear camera gently.";
@@ -176,22 +171,13 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
   const showCameraPreview =
     previewPreference.enabled && previewPreference.stream === stream;
   const scannerTitle = getScannerTitle({
-    fingerGateState,
     hasPulseEstimate,
     isSampling,
-    signalQuality,
   });
   const scannerDetail = getScannerDetail({
     hasPulseEstimate,
     isSampling,
-    pulseMessage: pulseEstimate.message,
-    scannerTitle,
   });
-  const scannerLabel = hasPulseEstimate
-    ? "Ready"
-    : isSampling
-      ? fingerGateLabels[fingerGateState]
-      : cameraStatusLabels[status];
 
   useEffect(() => {
     if (!shouldAutoStartSignalRef.current) {
@@ -271,12 +257,15 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
 
   return (
     <div className="flex min-h-[calc(100dvh-7rem)] flex-col pb-32">
-      <ScreenHeader
-        description="Rest your finger over the rear camera and stay still during the reading."
-        status="Camera check"
-        title="Pulse check"
-        tone="pulse"
-      />
+      <div>
+        <h1 className="text-4xl font-bold leading-[1.03] tracking-normal text-[var(--vl-text)]">
+          Pulse check
+        </h1>
+        <p className="mt-3 max-w-sm text-base leading-7 text-[var(--vl-text-muted)]">
+          Rest your finger over the rear camera and stay still during the
+          reading.
+        </p>
+      </div>
 
       <div className="mt-5">
         <CameraPreview
@@ -285,7 +274,6 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
           isSampling={isSampling}
           liveSignal={smoothedSignal}
           scannerDetail={scannerDetail}
-          scannerLabel={scannerLabel}
           scannerTitle={scannerTitle}
           showCameraPreview={showCameraPreview}
           status={status}
@@ -294,8 +282,8 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         />
       </div>
 
-      <section className="vl-result-card animate-card-in mt-4 p-4">
-        {hasPulseEstimate ? (
+      {hasPulseEstimate ? (
+        <section className="vl-result-card animate-card-in mt-4 p-4">
           <div>
             <div className="flex items-start gap-3">
               <span className="vl-glass-icon h-14 w-14" aria-hidden="true">
@@ -337,17 +325,8 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
               </p>
             ) : null}
           </div>
-        ) : (
-          <div>
-            <p className="text-lg font-bold text-[var(--vl-text)]">
-              Keep holding steady
-            </p>
-            <p className="mt-2 text-sm leading-6 text-[var(--vl-text-muted)]">
-              About 20 seconds gives a cleaner estimate.
-            </p>
-          </div>
-        )}
-      </section>
+        </section>
+      ) : null}
 
       <details className="vl-glass mt-4 overflow-hidden rounded-[22px]">
         <summary className="interactive-press flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 text-sm font-bold text-[var(--vl-text)] marker:hidden">
@@ -426,11 +405,11 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
       </details>
 
       <div className="pointer-events-none sticky bottom-0 z-20 -mx-5 mt-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-5">
-        <div className="vl-action-dock pointer-events-auto space-y-3 p-3">
+        <div className="vl-action-dock pointer-events-auto space-y-2.5 p-2.5">
           <Button className="w-full" onClick={handlePulseCheckButtonClick}>
             {isCheckActive ? "Stop check" : "Start pulse check"}
           </Button>
-          <div className="grid grid-cols-[0.9fr_1.1fr] gap-3">
+          <div className="grid grid-cols-[0.85fr_1.15fr] gap-2.5">
             <Button
               className="vl-dock-back min-h-12 w-full text-sm"
               onClick={onBack}
