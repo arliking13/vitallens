@@ -305,15 +305,24 @@ export function PulseCheckView({
   return (
     <div className="flex min-h-[calc(100dvh-7rem)] flex-col pb-32">
       <div>
-        <h1 className="text-4xl font-bold leading-[1.03] tracking-normal text-[var(--vl-text)]">
-          Pulse check
-        </h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-4xl font-bold leading-[1.03] tracking-normal text-[var(--vl-text)]">
+            Pulse check
+          </h1>
+          <button
+            className="vl-scan-guide-pill interactive-press shrink-0"
+            onClick={() => setIsScanGuideOpen(true)}
+            type="button"
+          >
+            Scan guide
+          </button>
+        </div>
         <p className="mt-3 max-w-sm text-base leading-7 text-[var(--vl-text-muted)]">
           Cover the rear camera and hold still during the reading.
         </p>
       </div>
 
-      <div className="mt-5 grid">
+      <div className="mt-5">
         <CameraPreview
           delayMs={40}
           fingerGateState={fingerGateState}
@@ -328,15 +337,6 @@ export function PulseCheckView({
           stream={stream}
           videoRef={videoRef}
         />
-        <div className="pointer-events-none col-start-1 row-start-1 flex h-16 items-start justify-end px-4 pr-[7.35rem] pt-3">
-          <button
-            className="vl-scan-guide-pill interactive-press pointer-events-auto shrink-0"
-            onClick={() => setIsScanGuideOpen(true)}
-            type="button"
-          >
-            Scan guide
-          </button>
-        </div>
       </div>
 
       {hasPulseEstimate ? (
