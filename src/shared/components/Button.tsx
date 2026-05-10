@@ -11,7 +11,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   secondary:
     "vl-secondary-button hover:bg-white/70 focus-visible:outline-[var(--vl-peach)]",
   ghost:
-    "border-transparent bg-transparent text-[var(--vl-text-muted)] hover:bg-white/50 focus-visible:outline-[var(--vl-peach)]",
+    "vl-secondary-button text-[var(--vl-text-muted)] hover:bg-white/70 focus-visible:outline-[var(--vl-peach)]",
 };
 
 export function Button({

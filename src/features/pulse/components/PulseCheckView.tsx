@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/shared/components/Button";
 import { InfoRow } from "@/shared/components/InfoRow";
+import { HeartIcon } from "@/shared/components/LineIcons";
 import { ScreenHeader } from "@/shared/components/ScreenHeader";
 
 import { CameraPreview } from "./CameraPreview";
@@ -313,28 +314,35 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
       <section className="vl-result-card animate-card-in mt-4 p-4">
         {hasPulseEstimate ? (
           <div>
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm font-bold text-[var(--vl-text-muted)]">
-                Estimated pulse
-              </p>
-              <span
-                className={[
-                  "rounded-full px-3 py-1 text-xs font-bold",
-                  pulseEstimate.confidence === "good"
-                    ? "border border-[#BDE5CB] bg-[var(--vl-success-soft)] text-[var(--vl-success)]"
-                    : "vl-peach-pill",
-                ].join(" ")}
-              >
-                Estimate confidence: {pulseEstimate.confidence}
+            <div className="flex items-start gap-3">
+              <span className="vl-glass-icon h-14 w-14" aria-hidden="true">
+                <HeartIcon className="h-7 w-7" />
               </span>
-            </div>
-            <div className="mt-2 flex items-end gap-2">
-              <span className="text-5xl font-bold tracking-normal text-[var(--vl-text)]">
-                {pulseEstimate.bpm}
-              </span>
-              <span className="pb-1.5 text-base font-bold text-[var(--vl-text-muted)]">
-                BPM
-              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-[var(--vl-text-muted)]">
+                    Estimated pulse
+                  </p>
+                  <span
+                    className={[
+                      "rounded-full px-3 py-1 text-xs font-bold",
+                      pulseEstimate.confidence === "good"
+                        ? "border border-[#BDE5CB] bg-[var(--vl-success-soft)] text-[var(--vl-success)]"
+                        : "vl-peach-pill",
+                    ].join(" ")}
+                  >
+                    Estimate confidence: {pulseEstimate.confidence}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-end gap-2">
+                  <span className="text-5xl font-bold tracking-normal text-[var(--vl-text)]">
+                    {pulseEstimate.bpm}
+                  </span>
+                  <span className="pb-1.5 text-base font-bold text-[var(--vl-text-muted)]">
+                    BPM
+                  </span>
+                </div>
+              </div>
             </div>
             <p className="mt-3 text-sm leading-6 text-[var(--vl-text-muted)]">
               Non-medical wellness estimate.

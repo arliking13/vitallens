@@ -5,6 +5,13 @@ import { useEffect } from "react";
 
 import type { FingerGateState } from "@/features/pulse/lib/fingerGate";
 import type { CameraStatus } from "@/features/pulse/hooks/useRearCamera";
+import {
+  CameraIcon,
+  FingerTapIcon,
+  HeartIcon,
+  ScanPlayIcon,
+  SparkIcon,
+} from "@/shared/components/LineIcons";
 
 type CameraPreviewProps = {
   delayMs?: number;
@@ -102,16 +109,19 @@ const instructionItems = [
     id: "place",
     title: "Place finger",
     detail: "Cover the rear camera gently.",
+    icon: FingerTapIcon,
   },
   {
     id: "hold",
     title: "Hold steady",
     detail: "Keep your finger still and relaxed.",
+    icon: HeartIcon,
   },
   {
     id: "scan",
     title: "Start scan",
     detail: "Tap start. The flash will turn on.",
+    icon: ScanPlayIcon,
   },
 ] as const;
 
@@ -242,18 +252,25 @@ export function CameraPreview({
       style={animationStyle}
     >
       <div className="flex items-center justify-between gap-3 px-2 pb-3">
-        <div>
-          <p className="text-sm font-semibold text-[var(--vl-text)]">Camera check</p>
-          <p className="mt-1 text-sm leading-5 text-[var(--vl-text-muted)]">
-            Sensor view
-          </p>
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="vl-glass-icon h-10 w-10" aria-hidden="true">
+            <CameraIcon className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-[var(--vl-text)]">
+              Camera check
+            </p>
+            <p className="mt-1 text-sm leading-5 text-[var(--vl-text-muted)]">
+              Sensor view
+            </p>
+          </div>
         </div>
         <span className="vl-glass-pill shrink-0 px-3 py-1.5 text-xs font-semibold text-[var(--vl-text-muted)]">
           {label}
         </span>
       </div>
 
-      <div className="relative overflow-hidden rounded-[24px] border border-white/60 bg-white/40 px-4 pb-4 pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
+      <div className="relative overflow-hidden rounded-[28px] border border-white/80 bg-white/60 px-4 pb-4 pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),inset_0_-1px_0_rgba(7,27,58,0.05)]">
         <video
           aria-hidden={!shouldShowRawPreview}
           aria-label={
@@ -291,21 +308,25 @@ export function CameraPreview({
             <div className="mb-4 grid grid-cols-3 gap-2">
               {instructionItems.map((item) => {
                 const isActive = item.id === activeInstruction;
+                const Icon = item.icon;
 
                 return (
                   <div
                     className={[
-                      "vl-instruction-card px-2.5 py-3 text-left",
+                      "vl-instruction-card px-2.5 py-3 text-center",
                       isActive ? "vl-instruction-card-active" : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
                     key={item.id}
                   >
-                    <span className="vl-peach-pill inline-flex h-8 w-8 items-center justify-center text-xs font-bold">
-                      {instructionItems.indexOf(item) + 1}
+                    <span
+                      className="vl-glass-icon mx-auto h-10 w-10"
+                      aria-hidden="true"
+                    >
+                      <Icon className="h-5 w-5" />
                     </span>
-                    <p className="mt-2 text-xs font-bold text-[var(--vl-text)]">
+                    <p className="mt-2 text-[0.72rem] font-bold text-[var(--vl-text)]">
                       {item.title}
                     </p>
                     <p className="mt-1 text-[0.68rem] leading-4 text-[var(--vl-text-muted)]">
@@ -316,10 +337,12 @@ export function CameraPreview({
               })}
             </div>
             <div
-              className="scanner-ring mx-auto grid h-24 w-24 place-items-center rounded-full border border-[var(--vl-peach-border)] bg-[rgba(253,233,227,0.52)] shadow-[0_0_44px_rgba(244,124,98,0.18),inset_0_1px_0_rgba(255,255,255,0.78)]"
+              className="scanner-ring mx-auto grid h-28 w-28 place-items-center rounded-full border border-white/80 bg-[rgba(253,233,227,0.68)] shadow-[0_0_54px_rgba(244,124,98,0.22),inset_0_1px_0_rgba(255,255,255,0.94),inset_0_-12px_28px_rgba(244,124,98,0.08)]"
               aria-hidden="true"
             >
-              <div className="h-[4.5rem] w-[4.5rem] rounded-full border border-white/60 bg-[rgba(244,124,98,0.28)] shadow-[inset_0_0_32px_rgba(244,124,98,0.2)]" />
+              <div className="grid h-20 w-20 place-items-center rounded-full border border-white/75 bg-[rgba(244,124,98,0.3)] shadow-[0_10px_30px_rgba(244,124,98,0.18),inset_0_0_34px_rgba(244,124,98,0.22)]">
+                <SparkIcon className="h-8 w-8 text-white drop-shadow-sm" />
+              </div>
             </div>
             <p className="mt-4 text-base font-bold text-[var(--vl-text)]">
               {title}
@@ -328,7 +351,7 @@ export function CameraPreview({
               {detail}
             </p>
             <div
-              className="signal-preview signal-pulse vl-glass relative mt-4 h-16 overflow-hidden rounded-[18px]"
+              className="signal-preview signal-pulse vl-glass relative mt-4 h-16 overflow-hidden rounded-[20px]"
               aria-hidden="true"
             >
               <div className="signal-glow absolute left-1/2 top-2 h-12 w-24 -translate-x-1/2 rounded-full bg-[rgba(244,124,98,0.12)] blur-2xl" />

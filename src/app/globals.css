@@ -14,16 +14,17 @@
   --vl-success-soft: #E8F6EC;
   --vl-warning: #D9A441;
   --vl-warning-soft: #FFF3D8;
-  --vl-glass-surface: rgba(255, 255, 255, 0.58);
-  --vl-glass-surface-strong: rgba(255, 255, 255, 0.76);
-  --vl-glass-border: rgba(7, 27, 58, 0.08);
-  --vl-shadow-soft: 0 18px 50px rgba(7, 27, 58, 0.08);
+  --vl-glass-surface: rgba(255, 255, 255, 0.68);
+  --vl-glass-surface-strong: rgba(255, 255, 255, 0.84);
+  --vl-glass-border: rgba(255, 255, 255, 0.82);
+  --vl-shadow-soft: 0 18px 50px rgba(7, 27, 58, 0.1);
   --vl-shadow-glass:
-    0 18px 50px rgba(7, 27, 58, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    inset 0 -1px 0 rgba(7, 27, 58, 0.04);
-  --vl-radius-lg: 28px;
-  --vl-radius-md: 20px;
+    0 22px 58px rgba(7, 27, 58, 0.1),
+    0 10px 28px rgba(244, 124, 98, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(7, 27, 58, 0.06);
+  --vl-radius-lg: 32px;
+  --vl-radius-md: 22px;
   --vl-radius-pill: 999px;
 
   --background: var(--vl-bg);
@@ -61,7 +62,7 @@ html {
 
 body {
   background:
-    radial-gradient(circle at 15% 0%, rgba(244, 124, 98, 0.08), transparent 34rem),
+    radial-gradient(circle at 16% 0%, rgba(244, 124, 98, 0.06), transparent 30rem),
     linear-gradient(180deg, var(--vl-bg), var(--vl-bg-soft));
   color: var(--vl-text);
   font-family:
@@ -89,24 +90,32 @@ button {
 .vl-scanner-card,
 .vl-instruction-card,
 .vl-result-card,
+.vl-glass-icon,
 .vl-debug-row {
-  -webkit-backdrop-filter: blur(22px) saturate(1.28);
-  backdrop-filter: blur(22px) saturate(1.28);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  backdrop-filter: blur(18px) saturate(1.6);
   border: 1px solid var(--vl-glass-border);
   box-shadow: var(--vl-shadow-glass);
   position: relative;
+}
+
+.vl-glass {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.5)),
+    rgba(255, 255, 255, 0.62);
 }
 
 .vl-glass::before,
 .vl-glass-card::before,
 .vl-scanner-card::before,
 .vl-instruction-card::before,
-.vl-result-card::before {
+.vl-result-card::before,
+.vl-glass-icon::before {
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.82),
-    rgba(255, 255, 255, 0.18) 42%,
-    rgba(244, 124, 98, 0.08)
+    rgba(255, 255, 255, 0.92),
+    rgba(255, 255, 255, 0.26) 42%,
+    rgba(244, 124, 98, 0.1)
   );
   border-radius: inherit;
   content: "";
@@ -118,13 +127,52 @@ button {
 .vl-glass-card,
 .vl-scanner-card,
 .vl-result-card {
-  background: var(--vl-glass-surface);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.62)),
+    var(--vl-glass-surface);
   border-radius: var(--vl-radius-lg);
 }
 
+.vl-scanner-card {
+  border-color: rgba(255, 255, 255, 0.88);
+  box-shadow:
+    0 28px 72px rgba(7, 27, 58, 0.12),
+    0 12px 34px rgba(244, 124, 98, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    inset 0 -1px 0 rgba(7, 27, 58, 0.06);
+}
+
 .vl-glass-pill {
-  background: rgba(255, 255, 255, 0.56);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.52)),
+    rgba(255, 255, 255, 0.62);
   border-radius: var(--vl-radius-pill);
+  box-shadow:
+    0 10px 26px rgba(7, 27, 58, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    inset 0 -1px 0 rgba(7, 27, 58, 0.05);
+}
+
+.vl-glass-icon {
+  align-items: center;
+  background:
+    radial-gradient(circle at 42% 28%, rgba(255, 255, 255, 0.96), transparent 36%),
+    linear-gradient(180deg, rgba(255, 238, 233, 0.9), rgba(253, 211, 201, 0.64)),
+    rgba(253, 233, 227, 0.84);
+  border-radius: var(--vl-radius-pill);
+  color: var(--vl-peach-strong);
+  display: inline-flex;
+  flex-shrink: 0;
+  justify-content: center;
+  box-shadow:
+    0 13px 30px rgba(244, 124, 98, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    inset 0 -10px 18px rgba(244, 124, 98, 0.08);
+}
+
+.vl-glass-icon > svg {
+  position: relative;
+  z-index: 1;
 }
 
 .vl-primary-button,
@@ -137,74 +185,125 @@ button {
 
 .vl-primary-button {
   background:
-    linear-gradient(180deg, rgba(255, 202, 190, 0.92), rgba(244, 124, 98, 0.94)),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.5), transparent 44%),
+    linear-gradient(180deg, rgba(255, 190, 176, 0.98), rgba(244, 124, 98, 0.96) 58%, rgba(234, 97, 74, 0.98)),
     var(--vl-peach);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.78);
   box-shadow:
-    0 16px 34px rgba(244, 124, 98, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.62),
-    inset 0 -10px 22px rgba(207, 76, 55, 0.16);
+    0 18px 38px rgba(244, 124, 98, 0.34),
+    0 6px 16px rgba(167, 55, 36, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    inset 0 -12px 24px rgba(198, 68, 47, 0.18);
   color: #FFFFFF;
   text-shadow: 0 1px 1px rgba(92, 27, 14, 0.12);
 }
 
 .vl-secondary-button {
-  background: rgba(255, 255, 255, 0.58);
-  border: 1px solid var(--vl-glass-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.52)),
+    rgba(255, 255, 255, 0.64);
+  border: 1px solid rgba(255, 255, 255, 0.78);
   box-shadow:
-    0 10px 24px rgba(7, 27, 58, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    0 12px 26px rgba(7, 27, 58, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    inset 0 -1px 0 rgba(7, 27, 58, 0.05);
   color: var(--vl-text);
 }
 
 .vl-segmented-control {
-  background: rgba(255, 255, 255, 0.46);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.44)),
+    rgba(255, 255, 255, 0.62);
   border-radius: var(--vl-radius-pill);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.74),
-    inset 0 -1px 0 rgba(7, 27, 58, 0.04),
-    0 14px 36px rgba(7, 27, 58, 0.06);
+    0 16px 38px rgba(7, 27, 58, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(7, 27, 58, 0.05);
 }
 
 .vl-segment-active {
   background:
-    linear-gradient(180deg, rgba(255, 235, 230, 0.94), rgba(253, 210, 200, 0.72)),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.72), transparent 50%),
+    linear-gradient(180deg, rgba(255, 229, 223, 0.98), rgba(252, 196, 183, 0.78)),
     var(--vl-peach-soft);
-  border: 1px solid rgba(248, 183, 168, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.84);
   box-shadow:
-    0 10px 26px rgba(244, 124, 98, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82);
-  color: var(--vl-peach-strong);
+    0 12px 28px rgba(244, 124, 98, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    inset 0 -8px 18px rgba(244, 124, 98, 0.08);
+  color: #C84D37;
+  overflow: hidden;
+  position: relative;
+}
+
+.vl-segment-active::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.76),
+    transparent
+  );
+  content: "";
+  height: 1px;
+  left: 16%;
+  pointer-events: none;
+  position: absolute;
+  right: 16%;
+  top: 2px;
 }
 
 .vl-peach-pill {
-  background: rgba(253, 233, 227, 0.72);
-  border: 1px solid rgba(248, 183, 168, 0.7);
+  background:
+    linear-gradient(180deg, rgba(255, 245, 242, 0.88), rgba(253, 225, 217, 0.72)),
+    rgba(253, 233, 227, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.74);
   border-radius: var(--vl-radius-pill);
+  box-shadow:
+    0 10px 24px rgba(244, 124, 98, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
   color: var(--vl-peach-strong);
 }
 
 .vl-instruction-card {
-  background: rgba(255, 255, 255, 0.48);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 250, 248, 0.56)),
+    rgba(255, 255, 255, 0.68);
   border-radius: var(--vl-radius-md);
+  box-shadow:
+    0 13px 32px rgba(7, 27, 58, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    inset 0 -1px 0 rgba(7, 27, 58, 0.04);
 }
 
 .vl-instruction-card-active {
   background:
-    linear-gradient(180deg, rgba(255, 238, 234, 0.84), rgba(253, 224, 216, 0.56)),
-    rgba(253, 233, 227, 0.7);
-  border-color: rgba(248, 183, 168, 0.72);
+    linear-gradient(180deg, rgba(255, 239, 235, 0.92), rgba(253, 214, 205, 0.68)),
+    rgba(253, 233, 227, 0.84);
+  border-color: rgba(248, 183, 168, 0.86);
   box-shadow:
-    0 12px 30px rgba(244, 124, 98, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    0 14px 34px rgba(244, 124, 98, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -8px 20px rgba(244, 124, 98, 0.08);
+}
+
+.vl-instruction-card-active .vl-glass-icon {
+  color: #E85C45;
+  box-shadow:
+    0 14px 32px rgba(244, 124, 98, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    inset 0 -10px 20px rgba(244, 124, 98, 0.12);
 }
 
 .vl-result-card {
-  background: rgba(255, 255, 255, 0.66);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.68)),
+    rgba(255, 255, 255, 0.78);
 }
 
 .vl-debug-row {
-  background: rgba(255, 255, 255, 0.46);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5)),
+    rgba(255, 255, 255, 0.58);
   border-radius: var(--vl-radius-md);
 }
 
