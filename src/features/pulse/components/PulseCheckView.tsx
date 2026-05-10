@@ -313,10 +313,29 @@ export function PulseCheckView({
         </p>
       </div>
 
-      <div className="mt-5">
-        <CameraPreview
-          delayMs={40}
-          fingerGateState={fingerGateState}
+        <div className="mt-5">
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-[22px] border border-white/70 bg-white/50 px-4 py-3 shadow-[0_10px_28px_rgba(7,27,58,0.06)] backdrop-blur-xl">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-[var(--vl-text)]">
+                Need help with scanning?
+              </p>
+              <p className="text-xs font-medium leading-5 text-[var(--vl-text-muted)]">
+                See how to place your finger correctly.
+              </p>
+            </div>
+
+            <button
+              className="vl-scan-guide-pill interactive-press shrink-0"
+              onClick={() => setIsScanGuideOpen(true)}
+              type="button"
+            >
+              Scan guide
+            </button>
+          </div>
+
+          <CameraPreview
+            delayMs={40}
+            fingerGateState={fingerGateState}
           hasPulseEstimate={hasPulseEstimate}
           isPulseCheckActive={isPulseCheckActive}
           isSampling={isSampling}
