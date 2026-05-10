@@ -276,13 +276,6 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         <p className="mt-3 max-w-sm text-base leading-7 text-[var(--vl-text-muted)]">
           Cover the rear camera and hold still during the reading.
         </p>
-        <Button
-          className="mt-4 min-h-11 px-4 text-sm"
-          onClick={() => setIsScanGuideOpen(true)}
-          variant="secondary"
-        >
-          How to scan
-        </Button>
       </div>
 
       <div className="mt-5">
@@ -293,6 +286,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
           isPulseCheckActive={isPulseCheckActive}
           isSampling={isSampling}
           liveSignal={smoothedSignal}
+          onOpenScanGuide={() => setIsScanGuideOpen(true)}
           scannerDetail={scannerDetail}
           scannerTitle={scannerTitle}
           showCameraPreview={showCameraPreview}
