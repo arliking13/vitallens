@@ -13,9 +13,7 @@ export function BreathCheckScreen({ onBack, onNext }: BreathCheckScreenProps) {
     <div className="flex flex-col">
       <ScreenHeader
         description="Place your iPhone on your upper abdomen or chest and breathe normally."
-        status="Motion check"
         title="Breath motion check"
-        tone="breath"
       />
 
       <div className="mt-6">

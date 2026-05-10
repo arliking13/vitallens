@@ -15,9 +15,7 @@ export function ReportScreen({ onBack, onRestart }: ReportScreenProps) {
     <div className="flex flex-col">
       <ScreenHeader
         description="Your pulse and breathing results will be summarized here after the check."
-        status="Report preview"
         title="Check-in summary"
-        tone="brand"
       />
 
       <div className="mt-6 grid gap-3">

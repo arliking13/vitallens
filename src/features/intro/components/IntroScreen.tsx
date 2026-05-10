@@ -35,9 +35,7 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
     <div className="flex flex-col">
       <ScreenHeader
         description="Move through two gentle checks and end with a calm wellness summary."
-        status="Wellness preview"
         title="Wellness check-in"
-        tone="brand"
       />
 
       <Card className="mt-8" delayMs={40} padding="lg">

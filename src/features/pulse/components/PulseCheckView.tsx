@@ -111,10 +111,10 @@ function getScannerDetail({
   }
 
   if (isSampling) {
-    return "Keep your finger still for a cleaner reading.";
+    return "Hold still for a cleaner reading.";
   }
 
-  return "Cover the rear camera gently.";
+  return "Cover the rear camera.";
 }
 
 export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
@@ -262,8 +262,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
           Pulse check
         </h1>
         <p className="mt-3 max-w-sm text-base leading-7 text-[var(--vl-text-muted)]">
-          Rest your finger over the rear camera and stay still during the
-          reading.
+          Cover the rear camera and hold still during the reading.
         </p>
       </div>
 
@@ -406,7 +405,10 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
 
       <div className="pointer-events-none sticky bottom-0 z-20 -mx-5 mt-auto px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-5">
         <div className="vl-action-dock pointer-events-auto space-y-2.5 p-2.5">
-          <Button className="w-full" onClick={handlePulseCheckButtonClick}>
+          <Button
+            className="vl-dock-primary w-full"
+            onClick={handlePulseCheckButtonClick}
+          >
             {isCheckActive ? "Stop check" : "Start pulse check"}
           </Button>
           <div className="grid grid-cols-[0.85fr_1.15fr] gap-2.5">

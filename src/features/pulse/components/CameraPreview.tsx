@@ -364,7 +364,7 @@ export function CameraPreview({
                     >
                       <Icon className="h-[1.125rem] w-[1.125rem]" />
                     </span>
-                    <p className="mt-1.5 text-[0.7rem] font-bold text-[var(--vl-text)]">
+                    <p className="mt-1.5 text-[0.68rem] font-bold text-[var(--vl-text)]">
                       {item.title}
                     </p>
                   </div>
@@ -390,14 +390,14 @@ export function CameraPreview({
                   .join(" ")}
               />
             </div>
-            <p className="mt-3 text-base font-bold text-[var(--vl-text)]">
+            <p className="mt-2.5 text-base font-bold text-[var(--vl-text)]">
               {title}
             </p>
-            <p className="mx-auto mt-1.5 max-w-56 text-sm leading-5 text-[var(--vl-text-muted)]">
+            <p className="mx-auto mt-1 max-w-52 text-sm leading-5 text-[var(--vl-text-muted)]">
               {detail}
             </p>
             <div
-              className="signal-preview signal-pulse vl-glass relative mt-3 h-14 overflow-hidden rounded-[20px]"
+              className="signal-preview signal-pulse vl-glass relative mt-2.5 h-14 overflow-hidden rounded-[20px]"
               aria-hidden="true"
             >
               <div className="signal-glow absolute left-1/2 top-2 h-12 w-24 -translate-x-1/2 rounded-full bg-[rgba(244,124,98,0.12)] blur-2xl" />
