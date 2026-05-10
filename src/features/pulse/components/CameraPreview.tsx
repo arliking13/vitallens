@@ -209,7 +209,6 @@ export function CameraPreview({
   delayMs = 40,
   fingerGateState,
   hasPulseEstimate = false,
-  isPulseCheckActive = false,
   isSampling = false,
   liveSignal,
   scannerDetail,
@@ -231,9 +230,11 @@ export function CameraPreview({
     isSampling,
     status,
   });
+  const isRecordingPulseSignal =
+    isSampling && fingerGateState === "recording" && !hasPulseEstimate;
   const scannerVisualState: ScannerVisualState = hasPulseEstimate
     ? "ready"
-    : isPulseCheckActive
+    : isRecordingPulseSignal
       ? "scanning"
       : "idle";
   const title = scannerTitle ?? copy.title;
