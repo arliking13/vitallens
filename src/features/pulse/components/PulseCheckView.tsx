@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/shared/components/Button";
 import { InfoRow } from "@/shared/components/InfoRow";
 import { HeartIcon } from "@/shared/components/LineIcons";
+import type { PulseCheckResult } from "@/shared/types/check-flow";
 
 import { CameraPreview } from "./CameraPreview";
 import { PulseScanGuide } from "./PulseScanGuide";
@@ -19,6 +20,7 @@ import { useRearCamera } from "../hooks/useRearCamera";
 type PulseCheckViewProps = {
   onBack: () => void;
   onNext: () => void;
+  onResult: (result: PulseCheckResult | null) => void;
 };
 
 type PreviewPreference = {
@@ -122,7 +124,11 @@ function getScannerDetail({
   return "Cover the rear camera.";
 }
 
-export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
+export function PulseCheckView({
+  onBack,
+  onNext,
+  onResult,
+}: PulseCheckViewProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const shouldAutoStartSignalRef = useRef(false);
   const cameraStatusAtStartRef = useRef<CameraStatus | null>(null);
@@ -219,11 +225,40 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
       return;
     }
 
+    onResult(null);
     resetSamples();
     cameraStatusAtStartRef.current = null;
     torchStateAtStartRef.current = null;
     shouldAutoStartSignalRef.current = true;
     void startCamera();
+  }
+
+  function getPulseCheckResult(): PulseCheckResult | null {
+    if (pulseEstimate.bpm === null) {
+      return null;
+    }
+
+    return {
+      bpm: pulseEstimate.bpm,
+      confidence: pulseEstimate.confidence,
+      sampleSeconds:
+        cleanWindowDurationMs > 0
+          ? Math.round(cleanWindowDurationMs / 1000)
+          : null,
+      signalLabel: "Clean",
+      source: "Finger-camera signal",
+    };
+  }
+
+  function handleContinue() {
+    const result = getPulseCheckResult();
+
+    if (!result) {
+      return;
+    }
+
+    onResult(result);
+    onNext();
   }
 
   function handleToggleCameraPreview() {
@@ -444,7 +479,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
             <Button
               className="vl-dock-continue min-h-12 w-full text-sm"
               disabled={!hasPulseEstimate}
-              onClick={onNext}
+              onClick={handleContinue}
               variant={hasPulseEstimate ? "primary" : "secondary"}
             >
               Continue
