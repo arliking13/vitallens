@@ -4,9 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/shared/components/Button";
 import { Card } from "@/shared/components/Card";
-import { InfoRow } from "@/shared/components/InfoRow";
 import { ScreenHeader } from "@/shared/components/ScreenHeader";
-import { SignalPreview } from "@/shared/components/SignalPreview";
 import type { BreathMotionResult } from "@/shared/types/check-flow";
 
 type BreathCheckScreenProps = {
@@ -40,6 +38,20 @@ const ALMOST_DONE_GUIDE_MS = 26000;
 
 const fallbackMessage =
   "Motion access unavailable. You can continue with pulse-only report.";
+const preferredVoiceNames = [
+  "samantha",
+  "ava",
+  "karen",
+  "siri",
+  "victoria",
+  "moira",
+  "tessa",
+  "serena",
+  "daniel",
+  "alex",
+];
+const calmBreathPath =
+  "M4 74 C26 32 54 32 76 74 C98 116 126 116 148 74 C170 32 198 32 236 74";
 
 function average(values: number[]) {
   if (values.length === 0) {
@@ -100,6 +112,32 @@ function buildPreviewSignal(samples: BreathMotionSample[]) {
 
   const min = Math.min(...values);
   return values.map((value) => (value - min) / range);
+}
+
+function clampSignalValue(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
+function buildMotionWavePath(values?: number[]) {
+  if (!values || values.length < 2) {
+    return calmBreathPath;
+  }
+
+  const width = 232;
+  const startX = 4;
+  const baseY = 92;
+  const amplitude = 56;
+  const stepX = width / (values.length - 1);
+  const points = values.map((value, index) => ({
+    x: startX + stepX * index,
+    y: baseY - clampSignalValue(value) * amplitude,
+  }));
+
+  return points.slice(1).reduce((path, point, index) => {
+    const previousPoint = points[index];
+    const controlX = (previousPoint.x + point.x) / 2;
+    return `${path} C ${controlX} ${previousPoint.y} ${controlX} ${point.y} ${point.x} ${point.y}`;
+  }, `M${points[0].x} ${points[0].y}`);
 }
 
 function buildBucketedMotion(samples: BreathMotionSample[]) {
@@ -200,7 +238,7 @@ async function requestDeviceMotionAccess() {
 
 function getHeaderDescription(phase: BreathPhase) {
   if (phase === "recording") {
-    return "Keep the phone still and breathe normally. Audio will guide the check.";
+    return "Keep the phone still and breathe normally.";
   }
 
   if (phase === "complete") {
@@ -211,7 +249,7 @@ function getHeaderDescription(phase: BreathPhase) {
     return fallbackMessage;
   }
 
-  return "Place your iPhone on your upper abdomen or chest. Audio will guide you through the check.";
+  return "Place your iPhone on your chest. Audio will guide the check.";
 }
 
 function getPreviewStatus(phase: BreathPhase) {
@@ -242,20 +280,31 @@ function getPrimaryButtonLabel(phase: BreathPhase) {
   return "Start guided breath check";
 }
 
-function getMotionAccessLabel(phase: BreathPhase) {
-  if (phase === "recording") {
-    return "Listening";
+function getPreferredSpeechVoice() {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    return null;
   }
 
-  if (phase === "complete") {
-    return "Complete";
+  const voices = window.speechSynthesis.getVoices();
+  const englishVoices = voices.filter((voice) =>
+    voice.lang.toLowerCase().startsWith("en"),
+  );
+
+  for (const preferredName of preferredVoiceNames) {
+    const voice = englishVoices.find((englishVoice) =>
+      englishVoice.name.toLowerCase().includes(preferredName),
+    );
+
+    if (voice) {
+      return voice;
+    }
   }
 
-  if (phase === "unavailable") {
-    return "Unavailable";
-  }
-
-  return "Ready";
+  return (
+    englishVoices.find((voice) => voice.localService) ??
+    englishVoices[0] ??
+    null
+  );
 }
 
 export function BreathCheckScreen({
@@ -267,7 +316,7 @@ export function BreathCheckScreen({
   const [motionSignal, setMotionSignal] = useState<number[] | undefined>();
   const [phase, setPhase] = useState<BreathPhase>("idle");
   const [result, setResult] = useState<BreathMotionResult | null>(null);
-  const [sampleCount, setSampleCount] = useState(0);
+  const [, setSampleCount] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<number | null>(null);
@@ -276,6 +325,7 @@ export function BreathCheckScreen({
   const motionHandlerRef = useRef<((event: DeviceMotionEvent) => void) | null>(
     null,
   );
+  const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const recordingStartedAtRef = useRef<number | null>(null);
   const samplesRef = useRef<BreathMotionSample[]>([]);
   const timersRef = useRef<number[]>([]);
@@ -310,6 +360,8 @@ export function BreathCheckScreen({
     }
 
     void audioContextRef.current?.resume();
+    preferredVoiceRef.current =
+      getPreferredSpeechVoice() ?? preferredVoiceRef.current;
   }
 
   function playChime(frequency = 660) {
@@ -342,6 +394,17 @@ export function BreathCheckScreen({
       "SpeechSynthesisUtterance" in window
     ) {
       const utterance = new SpeechSynthesisUtterance(message);
+      const preferredVoice =
+        preferredVoiceRef.current ?? getPreferredSpeechVoice();
+      preferredVoiceRef.current = preferredVoice;
+
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+        utterance.lang = preferredVoice.lang;
+      } else {
+        utterance.lang = "en-US";
+      }
+
       utterance.rate = 0.94;
       utterance.pitch = 1;
       utterance.volume = 1;
@@ -384,7 +447,7 @@ export function BreathCheckScreen({
     setSampleCount(nextResult.sampleCount);
     setStatusMessage(null);
     onResult(nextResult);
-    speakSequence(["Breath check complete. You can pick up your phone."]);
+    speakSequence(["Check complete."]);
   }
 
   function startMotionCollection() {
@@ -393,7 +456,6 @@ export function BreathCheckScreen({
     }
 
     recordingStartedAtRef.current = performance.now();
-    speak("Recording started.");
 
     const handleMotion = (event: DeviceMotionEvent) => {
       const value = getMotionMagnitude(event);
@@ -461,8 +523,8 @@ export function BreathCheckScreen({
     setStatusMessage(null);
     prepareAudio();
     speakSequence([
-      "Place your iPhone on your upper abdomen or chest.",
-      "Keep it still and breathe normally.",
+      "Place your iPhone on your chest.",
+      "Breathe normally.",
       "Starting in three, two, one.",
     ]);
 
@@ -501,6 +563,19 @@ export function BreathCheckScreen({
   }
 
   useEffect(() => {
+    const synthesis =
+      typeof window !== "undefined" && "speechSynthesis" in window
+        ? window.speechSynthesis
+        : null;
+
+    function handleVoicesChanged() {
+      preferredVoiceRef.current =
+        getPreferredSpeechVoice() ?? preferredVoiceRef.current;
+    }
+
+    handleVoicesChanged();
+    synthesis?.addEventListener("voiceschanged", handleVoicesChanged);
+
     return () => {
       isRunningRef.current = false;
       timersRef.current.forEach((timerId) => window.clearTimeout(timerId));
@@ -518,6 +593,7 @@ export function BreathCheckScreen({
         window.speechSynthesis.cancel();
       }
 
+      synthesis?.removeEventListener("voiceschanged", handleVoicesChanged);
       void audioContextRef.current?.close();
     };
   }, []);
@@ -532,6 +608,8 @@ export function BreathCheckScreen({
     : `${roundedElapsedSeconds}s / ${RECORDING_DURATION_SECONDS}s`;
   const canContinue = phase === "complete" || phase === "unavailable";
   const signalLabel = result?.motionDetected ? "Detected" : "Low";
+  const statusLabel = getPreviewStatus(phase);
+  const wavePath = buildMotionWavePath(motionSignal);
 
   return (
     <div className="flex min-h-[calc(100dvh-7rem)] flex-col pb-32">
@@ -540,36 +618,68 @@ export function BreathCheckScreen({
         title="Breath motion check"
       />
 
-      <div className="mt-6">
-        <SignalPreview
-          caption={
-            phase === "recording"
-              ? "Motion signal preview"
-              : "Guided motion check"
-          }
-          delayMs={40}
-          label="Breath motion"
-          liveSignal={motionSignal}
-          status={getPreviewStatus(phase)}
-          tone="breath"
-        />
-      </div>
-
-      <Card className="mt-4" delayMs={80} padding="sm">
-        <div className="flex items-center justify-between gap-3">
+      <Card
+        className={[
+          "signal-preview mt-6 overflow-hidden",
+          phase === "recording" ? "signal-breathe" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        delayMs={40}
+        padding="sm"
+      >
+        <div className="flex items-center justify-between gap-3 px-1 pb-4">
           <div>
             <p className="text-sm font-bold text-[var(--vl-text)]">
-              Audio guidance on
+              Audio-guided check
             </p>
             <p className="mt-1 text-sm leading-5 text-[var(--vl-text-muted)]">
-              Voice guidance plays during the check. Soft chimes are used if
-              voice is unavailable.
+              {phase === "recording" ? "Breathe normally." : "Audio guidance on."}
             </p>
           </div>
-          <span className="vl-peach-pill shrink-0 px-3 py-1 text-xs font-bold">
-            On
+          <span
+            className={[
+              "shrink-0 rounded-full px-3 py-1.5 text-xs font-bold",
+              phase === "recording"
+                ? "vl-peach-pill"
+                : "vl-glass-pill text-[var(--vl-text-muted)]",
+            ].join(" ")}
+          >
+            {statusLabel}
           </span>
         </div>
+
+        <div
+          className="relative h-56 overflow-hidden rounded-[22px] bg-white/35"
+          aria-hidden="true"
+        >
+          <div className="signal-glow absolute left-1/2 top-8 h-24 w-24 -translate-x-1/2 rounded-full bg-[rgba(244,124,98,0.12)] blur-2xl" />
+          <div className="signal-orb absolute left-1/2 top-7 h-28 w-16 -translate-x-1/2 rounded-[24px] border border-white/80 bg-white/70 shadow-[inset_0_0_0_7px_rgba(244,124,98,0.08),0_16px_40px_rgba(244,124,98,0.14)]" />
+          <svg
+            className="signal-wave absolute inset-x-4 bottom-9 h-28"
+            preserveAspectRatio="none"
+            viewBox="0 0 240 128"
+          >
+            <path
+              d={wavePath}
+              fill="none"
+              opacity="0.16"
+              stroke="var(--vl-peach)"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="18"
+            />
+            <path
+              d={wavePath}
+              fill="none"
+              stroke="var(--vl-peach)"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="7"
+            />
+          </svg>
+        </div>
+
         <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/55">
           <div
             className="h-full rounded-full bg-[var(--vl-peach)] transition-[width] duration-200"
@@ -577,25 +687,10 @@ export function BreathCheckScreen({
           />
         </div>
         <div className="mt-2 flex items-center justify-between text-xs font-bold text-[var(--vl-text-muted)]">
-          <span>{phase === "recording" ? "Listening" : "Progress"}</span>
+          <span>Progress</span>
           <span>{sampleLabel}</span>
         </div>
       </Card>
-
-      <div className="mt-4 grid gap-3">
-        <InfoRow
-          delayMs={120}
-          label="Motion access"
-          tone={phase === "unavailable" ? "warning" : "breath"}
-          value={getMotionAccessLabel(phase)}
-        />
-        <InfoRow
-          delayMs={160}
-          label="Motion samples"
-          tone={sampleCount > 0 ? "breath" : "neutral"}
-          value={String(sampleCount)}
-        />
-      </div>
 
       {statusMessage ? (
         <div className="vl-glass animate-card-in mt-4 rounded-[22px] px-4 py-3.5">
@@ -618,9 +713,6 @@ export function BreathCheckScreen({
               Sample: {result.durationSeconds}s
             </span>
           </div>
-          <p className="mt-3 text-sm leading-6 text-[var(--vl-text-muted)]">
-            Wellness-only motion signal summary. Not for medical decisions.
-          </p>
         </section>
       ) : null}
 
