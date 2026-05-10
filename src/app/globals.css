@@ -201,6 +201,23 @@ button {
   z-index: 1;
 }
 
+.vl-scanner-icon,
+.vl-state-icon {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  position: relative;
+  transform-origin: center center;
+  will-change: filter, transform;
+  z-index: 1;
+}
+
+.vl-scanner-icon > svg,
+.vl-state-icon > svg {
+  transform-box: fill-box;
+  transform-origin: center center;
+}
+
 .vl-scanner-core-idle {
   color: var(--vl-peach-strong);
 }
@@ -610,13 +627,13 @@ button {
 }
 
 .vl-heartbeat {
-  animation: vl-heartbeat 1s ease-in-out infinite;
+  animation: vl-heartbeat 0.8s ease-in-out infinite;
   transform-box: fill-box;
-  transform-origin: center;
+  transform-origin: center center;
 }
 
 .vl-ring-pulse::before {
-  animation: vl-ring-pulse 1.05s ease-in-out infinite;
+  animation: vl-ring-pulse 0.8s ease-in-out infinite;
 }
 
 @keyframes screen-in {
@@ -745,20 +762,23 @@ button {
 @keyframes vl-heartbeat {
   0%,
   100% {
-    filter: drop-shadow(0 5px 10px rgba(92, 27, 14, 0.12));
-    opacity: 0.96;
+    filter:
+      drop-shadow(0 5px 10px rgba(92, 27, 14, 0.14))
+      drop-shadow(0 0 0 rgba(244, 124, 98, 0));
+    opacity: 0.94;
     transform: scale(1);
   }
 
-  42% {
+  44% {
     filter:
-      drop-shadow(0 7px 12px rgba(92, 27, 14, 0.14))
-      drop-shadow(0 0 10px rgba(255, 255, 255, 0.44));
+      drop-shadow(0 8px 14px rgba(92, 27, 14, 0.18))
+      drop-shadow(0 0 14px rgba(244, 124, 98, 0.38))
+      drop-shadow(0 0 10px rgba(255, 255, 255, 0.48));
     opacity: 1;
-    transform: translateY(-1px) scale(1.14);
+    transform: translateY(-1px) scale(1.16);
   }
 
-  64% {
+  68% {
     transform: scale(1);
   }
 }
@@ -766,13 +786,13 @@ button {
 @keyframes vl-ring-pulse {
   0%,
   100% {
-    opacity: 0.68;
-    transform: scale(0.96);
+    opacity: 0.56;
+    transform: scale(0.94);
   }
 
   50% {
     opacity: 1;
-    transform: scale(1.08);
+    transform: scale(1.13);
   }
 }
 

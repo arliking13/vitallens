@@ -82,17 +82,17 @@ const signalQualityRowTones = {
 } as const;
 
 function getScannerTitle({
+  isActivelyScanning,
   hasPulseEstimate,
-  isSampling,
 }: {
+  isActivelyScanning: boolean;
   hasPulseEstimate: boolean;
-  isSampling: boolean;
 }) {
   if (hasPulseEstimate) {
     return "Estimate ready";
   }
 
-  if (isSampling) {
+  if (isActivelyScanning) {
     return "Scanning pulse";
   }
 
@@ -100,17 +100,17 @@ function getScannerTitle({
 }
 
 function getScannerDetail({
+  isActivelyScanning,
   hasPulseEstimate,
-  isSampling,
 }: {
+  isActivelyScanning: boolean;
   hasPulseEstimate: boolean;
-  isSampling: boolean;
 }) {
   if (hasPulseEstimate) {
     return "You can continue or hold a little longer.";
   }
 
-  if (isSampling) {
+  if (isActivelyScanning) {
     return "Hold still for a cleaner reading.";
   }
 
@@ -170,13 +170,15 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
     : "Using current clean window";
   const showCameraPreview =
     previewPreference.enabled && previewPreference.stream === stream;
+  const isActivelyScanning =
+    isSampling && fingerGateState === "recording" && !hasPulseEstimate;
   const scannerTitle = getScannerTitle({
+    isActivelyScanning,
     hasPulseEstimate,
-    isSampling,
   });
   const scannerDetail = getScannerDetail({
+    isActivelyScanning,
     hasPulseEstimate,
-    isSampling,
   });
 
   useEffect(() => {
@@ -270,6 +272,7 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
         <CameraPreview
           delayMs={40}
           fingerGateState={fingerGateState}
+          isActivelyScanning={isActivelyScanning}
           isSampling={isSampling}
           liveSignal={smoothedSignal}
           scannerDetail={scannerDetail}

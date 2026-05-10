@@ -16,6 +16,7 @@ import {
 type CameraPreviewProps = {
   delayMs?: number;
   fingerGateState?: FingerGateState;
+  isActivelyScanning?: boolean;
   isSampling?: boolean;
   liveSignal?: number[];
   scannerDetail?: string;
@@ -160,17 +161,17 @@ function getActiveInstruction({
 }
 
 function getScannerCoreState({
-  isSampling,
+  isActivelyScanning,
   title,
 }: {
-  isSampling: boolean;
+  isActivelyScanning: boolean;
   title: string;
 }): ScannerCoreState {
   if (title === "Estimate ready") {
     return "ready";
   }
 
-  if (isSampling) {
+  if (isActivelyScanning) {
     return "scanning";
   }
 
@@ -222,6 +223,7 @@ function buildSignalPath(values: number[]) {
 export function CameraPreview({
   delayMs = 40,
   fingerGateState,
+  isActivelyScanning = false,
   isSampling = false,
   liveSignal,
   scannerDetail,
@@ -245,7 +247,7 @@ export function CameraPreview({
   });
   const title = scannerTitle ?? copy.title;
   const detail = scannerDetail ?? copy.detail;
-  const scannerCoreState = getScannerCoreState({ isSampling, title });
+  const scannerCoreState = getScannerCoreState({ isActivelyScanning, title });
   const ScannerCoreIcon =
     scannerCoreState === "ready"
       ? CheckIcon
@@ -295,7 +297,9 @@ export function CameraPreview({
           {scannerCoreState === "ready" ? (
             <CheckIcon className="h-3.5 w-3.5" />
           ) : scannerCoreState === "scanning" ? (
-            <HeartIcon className="vl-heartbeat h-3.5 w-3.5" />
+            <span className="vl-state-icon vl-heartbeat" aria-hidden="true">
+              <HeartIcon className="h-3.5 w-3.5" />
+            </span>
           ) : (
             <span className="vl-state-dot" aria-hidden="true" />
           )}
@@ -381,14 +385,18 @@ export function CameraPreview({
                 .join(" ")}
               aria-hidden="true"
             >
-              <ScannerCoreIcon
+              <span
                 className={[
-                  scannerCoreState === "scanning" ? "vl-heartbeat" : "",
-                  scannerCoreState === "idle" ? "h-6 w-6" : "h-7 w-7",
+                  "vl-scanner-icon",
+                  isActivelyScanning ? "vl-heartbeat" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
-              />
+              >
+                <ScannerCoreIcon
+                  className={scannerCoreState === "idle" ? "h-6 w-6" : "h-7 w-7"}
+                />
+              </span>
             </div>
             <p className="mt-2.5 text-base font-bold text-[var(--vl-text)]">
               {title}
