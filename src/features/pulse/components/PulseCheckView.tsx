@@ -276,7 +276,6 @@ export function PulseCheckView({ onBack, onNext }: PulseCheckViewProps) {
           isPulseCheckActive={isPulseCheckActive}
           isSampling={isSampling}
           liveSignal={smoothedSignal}
-          samplingStatus={samplingStatus}
           scannerDetail={scannerDetail}
           scannerTitle={scannerTitle}
           showCameraPreview={showCameraPreview}

@@ -4,7 +4,6 @@ import type { CSSProperties, RefObject } from "react";
 import { useEffect } from "react";
 
 import type { FingerGateState } from "@/features/pulse/lib/fingerGate";
-import type { SamplingStatus } from "@/features/pulse/hooks/usePulseFrameSampler";
 import type { CameraStatus } from "@/features/pulse/hooks/useRearCamera";
 import {
   CameraIcon,
@@ -21,7 +20,6 @@ type CameraPreviewProps = {
   isPulseCheckActive?: boolean;
   isSampling?: boolean;
   liveSignal?: number[];
-  samplingStatus?: SamplingStatus;
   scannerDetail?: string;
   scannerTitle?: string;
   showCameraPreview?: boolean;
@@ -213,7 +211,6 @@ export function CameraPreview({
   isPulseCheckActive = false,
   isSampling = false,
   liveSignal,
-  samplingStatus = "idle",
   scannerDetail,
   scannerTitle,
   showCameraPreview = false,
@@ -361,43 +358,24 @@ export function CameraPreview({
                 );
               })}
             </div>
-            <div
+            <span
               className={[
                 "vl-scanner-core",
                 `vl-scanner-core-${scannerVisualState}`,
-                scannerVisualState === "scanning" ? "vl-ring-pulse" : "",
+                scannerVisualState === "scanning" ? "vl-heartbeat-core" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
               aria-hidden="true"
-              data-scanner-state={scannerVisualState}
             >
               {scannerVisualState === "ready" ? (
-                <span className="vl-scanner-icon" aria-hidden="true">
-                  <CheckIcon className="h-7 w-7" />
-                </span>
+                <CheckIcon className="h-7 w-7" />
               ) : scannerVisualState === "scanning" ? (
-                <span
-                  className="vl-scanner-heart"
-                  aria-hidden="true"
-                  data-heart-rendered="true"
-                >
-                  <HeartIcon className="h-7 w-7" />
-                </span>
+                <HeartIcon className="h-7 w-7" />
               ) : (
-                <span className="vl-scanner-icon" aria-hidden="true">
-                  <FingerTapIcon className="h-6 w-6" />
-                </span>
+                <FingerTapIcon className="h-6 w-6" />
               )}
-            </div>
-            <div className="mt-2 rounded-2xl border border-red-300 bg-white/80 px-2.5 py-2 text-left font-mono text-[0.62rem] leading-4 text-red-700 shadow-sm">
-              DEBUG: status: {status}; samplingStatus: {samplingStatus};
-              isSampling: {String(isSampling)}; hasPulseEstimate:{" "}
-              {String(hasPulseEstimate)}; isPulseCheckActive:{" "}
-              {String(isPulseCheckActive)}; scannerState:{" "}
-              {scannerVisualState}; fingerGateState:{" "}
-              {fingerGateState ?? "none"}
-            </div>
+            </span>
             <p className="mt-2.5 text-base font-bold text-[var(--vl-text)]">
               {title}
             </p>
